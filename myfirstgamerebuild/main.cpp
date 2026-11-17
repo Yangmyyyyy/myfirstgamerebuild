@@ -19,7 +19,9 @@ int main()
 	float playerX = screenWidth / 2;
 	float playerY = screenHeight / 2;
 	// 这里约定速度单位为像素/秒，f 表示 float。运行时变速可用普通 float，或用基础速度乘状态倍率。
-	const float playerSpeed = 200.0f;
+	float playerNormalSpeed = 200.0f;
+	float playerDushSpeed = 300.0f;
+	float playercurSpeed;
 	while (!WindowShouldClose())
 	{
 		// raylib 的 GetFrameTime() 返回上一帧耗时（秒）。每轮重新读取，注意变量名大小写。
@@ -38,6 +40,10 @@ int main()
 			directionY -= 1;
 		if (IsKeyDown(KEY_S))
 			directionY += 1;
+		if (IsKeyDown(KEY_LEFT_SHIFT))
+			playercurSpeed = playerDushSpeed;
+		else
+			playercurSpeed = playerNormalSpeed;
 		// std::sqrt 来自 C++ 标准库。W+D 的方向 (1,-1) 长度为 √2，两个分量同除长度可保持方向并统一速度。
 		// 长度为 0 跳过移动，长度为 1 直接移动。if 下有多条语句时用大括号，否则 else 可能失去对应的 if。
 		// 也可先统一调整两个方向分量，再写一次坐标更新。两种方案的内存开销基本相同，合并主要方便维护。
@@ -45,13 +51,13 @@ int main()
 		if (directionLength != 0)
 			if (directionLength > 1)
 			{
-				playerX += playerSpeed * deltaTime * directionX / directionLength;
-				playerY += playerSpeed * deltaTime * directionY / directionLength;
+				playerX += playercurSpeed * deltaTime * directionX / directionLength;
+				playerY += playercurSpeed * deltaTime * directionY / directionLength;
 			}
 			else
 			{
-				playerX += playerSpeed * deltaTime * directionX;
-				playerY += playerSpeed * deltaTime * directionY;
+				playerX += playercurSpeed * deltaTime * directionX;
+				playerY += playercurSpeed * deltaTime * directionY;
 			}
         // 移动后先限制圆心。左、上留一个半径，右、下用窗口尺寸减半径。
         // raylib 默认在 EndDrawing 处理输入。把更新写在它后面也能赶上下次绘制。
