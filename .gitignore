@@ -1,0 +1,11 @@
+# Visual Studio 本地缓存和个人设置
+.vs/
+*.vcxproj.user
+
+# 编译生成的文件
+x64/
+Debug/
+Release/
+
+# NuGet 下载的依赖
+packages/

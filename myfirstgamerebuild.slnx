@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="myfirstgamerebuild/myfirstgamerebuild.vcxproj" Id="05736d96-12ff-4e10-b396-8ff158f281a3" />
+</Solution>
