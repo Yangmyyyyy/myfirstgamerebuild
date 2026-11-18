@@ -7,6 +7,15 @@
 // 以前误写 playerX += playerX + 1;，400 会变成 801。每帧只加 1 应写 playerX += 1;。
 // C++ 提供类型、条件和循环。raylib 提供窗口、键盘、计时和绘制函数。
 // SDL 和虚幻有各自的接口，坐标、位移、边界和调试这些编程方法可以继续使用。
+// 重做 Day04（2026-11-17）
+// 按住左 Shift 时每帧选 300 像素/秒，松开后选 200。直走和斜走共用当前速度。
+// Rectangle 保存左上角坐标和宽高。DrawRectangleRec 接收整个矩形和颜色。
+// ClearBackground 清当前画布。待绘制的形状可能到 EndDrawing 才提交并显示。
+// 一般先 BeginDrawing，再清背景和画墙、玩家，最后 EndDrawing。
+// raylib.h 已声明碰撞函数。参数依次是 Vector2 圆心、float 半径、Rectangle 墙。
+// { playerX, playerY } 合成一个圆心参数。函数返回 bool，用 = 把结果存给 isTouchingWall。
+// 角色外观可以很复杂，挡墙时仍可用脚边的小圆，挥剑时可另设攻击命中区域。
+// 下次继续：整理重复检测和未完成的 if，再根据碰墙结果选择玩家圆的颜色。
 int main()
 {
 	// 宽高传给 InitWindow 后决定绘图区的像素尺寸。坐标加 1 就沿对应轴移动一个像素单位。
@@ -22,6 +31,7 @@ int main()
 	float playerNormalSpeed = 200.0f;
 	float playerDushSpeed = 300.0f;
 	float playercurSpeed;
+	Rectangle wall(650, 180, 40, 240);
 	while (!WindowShouldClose())
 	{
 		// raylib 的 GetFrameTime() 返回上一帧耗时（秒）。每轮重新读取，注意变量名大小写。
@@ -47,6 +57,8 @@ int main()
 		// std::sqrt 来自 C++ 标准库。W+D 的方向 (1,-1) 长度为 √2，两个分量同除长度可保持方向并统一速度。
 		// 长度为 0 跳过移动，长度为 1 直接移动。if 下有多条语句时用大括号，否则 else 可能失去对应的 if。
 		// 也可先统一调整两个方向分量，再写一次坐标更新。两种方案的内存开销基本相同，合并主要方便维护。
+		float oldX = playerX; // 保存本帧移动前的横坐标
+		float oldY = playerY; // 保存本帧移动前的纵坐标
 		float directionLength = std::sqrt(directionX * directionX + directionY * directionY);
 		if (directionLength != 0)
 			if (directionLength > 1)
@@ -70,11 +82,22 @@ int main()
 			playerY = playerRadius;
 		if (playerY >= screenHeight - playerRadius)
 			playerY = screenHeight - playerRadius;
+		bool isTouchingWall = CheckCollisionCircleRec(
+			{ playerX, playerY }, playerRadius, wall
+		); // 把圆和墙是否重叠的结果存下来，等会儿用它决定墙的颜色
         BeginDrawing();
+		DrawRectangleRec(wall, RED);
 		ClearBackground(SKYBLUE);
 		// DrawCircle 接收两个整数坐标，DrawCircleV 接收含两个 float 的 Vector2。
 		// 用 {playerX, playerY} 组成一对坐标。写成 (playerX, playerY) 只会得到逗号右边的值。
-		DrawCircleV({ playerX,playerY }, playerRadius, YELLOW);
+		if (isTouchingWall == false)
+		    DrawCircleV({ playerX,playerY }, playerRadius, YELLOW);
+		else
+		{
+			playerX = oldX; // 撞墙时恢复本帧移动前的横坐标
+			playerY = oldY; // 撞墙时恢复本帧移动前的纵坐标
+			DrawCircleV({ playerX,playerY }, playerRadius, GREEN);
+		}
 		EndDrawing();
 	}
 	CloseWindow();
