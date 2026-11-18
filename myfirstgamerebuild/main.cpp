@@ -16,6 +16,11 @@
 // { playerX, playerY } 合成一个圆心参数。函数返回 bool，用 = 把结果存给 isTouchingWall。
 // 角色外观可以很复杂，挡墙时仍可用脚边的小圆，挥剑时可另设攻击命中区域。
 // 下次继续：整理重复检测和未完成的 if，再根据碰墙结果选择玩家圆的颜色。
+// 重做 Day05（2026-11-18）
+// 条件断点在程序到达该行时求值。放在检测完成后，可暂停查看本帧的碰撞结果。
+// 先归一化方向，再分别尝试 X 和 Y 移动。每次只改变一轴，再用当前圆心检查墙。
+// 撞墙时把旧值写回该轴。只把旧坐标传给 DrawCircleV，会改变画面但不会修正下一帧的起点。
+// || 表示任一轴碰撞就给出变色反馈。绘制阶段使用已经处理好的玩家坐标。
 int main()
 {
 	// 宽高传给 InitWindow 后决定绘图区的像素尺寸。坐标加 1 就沿对应轴移动一个像素单位。
@@ -60,17 +65,19 @@ int main()
 		float oldX = playerX; // 保存本帧移动前的横坐标
 		float oldY = playerY; // 保存本帧移动前的纵坐标
 		float directionLength = std::sqrt(directionX * directionX + directionY * directionY);
-		if (directionLength != 0)
-			if (directionLength > 1)
-			{
-				playerX += playercurSpeed * deltaTime * directionX / directionLength;
-				playerY += playercurSpeed * deltaTime * directionY / directionLength;
-			}
-			else
-			{
-				playerX += playercurSpeed * deltaTime * directionX;
-				playerY += playercurSpeed * deltaTime * directionY;
-			}
+		if (directionLength > 1)
+		{
+			directionX  = directionX / directionLength;
+			directionY  = directionY / directionLength;// 斜走时缩小两个方向分量，保持总速度一致
+		}
+		playerX += directionX * playercurSpeed * deltaTime;
+		bool hitWallOnX = CheckCollisionCircleRec({ playerX, playerY }, playerRadius, wall);
+		if (hitWallOnX == true)
+			playerX = oldX;
+		playerY += directionY * playercurSpeed * deltaTime;
+		bool hitWallOnY = CheckCollisionCircleRec({ playerX, playerY }, playerRadius, wall);
+		if (hitWallOnY == true)
+			playerY = oldY;
         // 移动后先限制圆心。左、上留一个半径，右、下用窗口尺寸减半径。
         // raylib 默认在 EndDrawing 处理输入。把更新写在它后面也能赶上下次绘制。
         // 边界修正要在画圆前执行，否则画出的这一帧可能已经出界。
@@ -82,9 +89,7 @@ int main()
 			playerY = playerRadius;
 		if (playerY >= screenHeight - playerRadius)
 			playerY = screenHeight - playerRadius;
-		bool isTouchingWall = CheckCollisionCircleRec(
-			{ playerX, playerY }, playerRadius, wall
-		); // 把圆和墙是否重叠的结果存下来，等会儿用它决定墙的颜色
+		bool isTouchingWall = hitWallOnX || hitWallOnY; // 任一方向撞墙，这一帧就显示绿圆 // 把圆和墙是否重叠的结果存下来，等会儿用它决定墙的颜色
         BeginDrawing();
 		DrawRectangleRec(wall, RED);
 		ClearBackground(SKYBLUE);
@@ -94,8 +99,6 @@ int main()
 		    DrawCircleV({ playerX,playerY }, playerRadius, YELLOW);
 		else
 		{
-			playerX = oldX; // 撞墙时恢复本帧移动前的横坐标
-			playerY = oldY; // 撞墙时恢复本帧移动前的纵坐标
 			DrawCircleV({ playerX,playerY }, playerRadius, GREEN);
 		}
 		EndDrawing();
