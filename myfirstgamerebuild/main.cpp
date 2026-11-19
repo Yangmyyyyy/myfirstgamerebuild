@@ -49,24 +49,35 @@ int main()
 		// 固定时间步是另一种更新方式。当前移动用实际帧耗时。
 		float deltaTime = GetFrameTime(); // 保存上一帧耗时，单位是秒
 		// 方向每帧从零开始。四个独立 if 可以同时成立，屏幕 x 向右增大，y 向下增大。
+		if (playerHealth <= 0 && IsKeyPressed(KEY_R))
+		{
+			playerHealth = playerMaxHealth; // 按 R 键恢复满血
+			playerX = screenWidth / 2;      // 重置玩家位置
+			playerY = screenHeight / 2;
+			damageCooldown = 0.0f; // 重置受伤冷却时间
+		}
 		if (damageCooldown > 0)
 		{
 			damageCooldown -= deltaTime; // 每帧减少冷却时间
 		}
 		float directionX = 0.0f;
 		float directionY = 0.0f;
-		if (IsKeyDown(KEY_D))
-			directionX += 1;
-		if (IsKeyDown(KEY_A))
-			directionX -= 1;
-		if (IsKeyDown(KEY_W))
-			directionY -= 1;
-		if (IsKeyDown(KEY_S))
-			directionY += 1;
+
 		if (IsKeyDown(KEY_LEFT_SHIFT))
 			playercurSpeed = playerDushSpeed;
 		else
 			playercurSpeed = playerNormalSpeed;
+		if (playerHealth > 0)
+		{
+			if (IsKeyDown(KEY_W))
+				directionY -= 1.0f;
+			if (IsKeyDown(KEY_S))
+				directionY += 1.0f;
+			if (IsKeyDown(KEY_A))
+				directionX -= 1.0f;
+			if (IsKeyDown(KEY_D))
+				directionX += 1.0f;
+		}
 		// std::sqrt 来自 C++ 标准库。W+D 的方向 (1,-1) 长度为 √2，两个分量同除长度可保持方向并统一速度。
 		// 长度为 0 跳过移动，长度为 1 直接移动。if 下有多条语句时用大括号，否则 else 可能失去对应的 if。
 		// 也可先统一调整两个方向分量，再写一次坐标更新。两种方案的内存开销基本相同，合并主要方便维护。
@@ -106,6 +117,8 @@ int main()
 		}
 		if (playerHealth <= 0 )
 			playerHealth = 0;
+		bool isDead = (playerHealth <= 0);
+
 		BeginDrawing();
 		ClearBackground(SKYBLUE);
 		DrawText(TextFormat("Health: %d", playerHealth), 20, 20, 24, BLACK);
@@ -121,6 +134,11 @@ int main()
 		else
 		{
 			DrawCircleV({ playerX,playerY }, playerRadius, WHITE);
+		}
+		if (isDead == true)
+		{
+			DrawText("U DEAD", screenWidth / 2 - 100, screenHeight / 2 - 50, 50, RED);
+			DrawText("PRESS [R] TO RESTART", screenWidth / 2 - 300, screenHeight / 2 , 50, RED);
 		}
 		EndDrawing();
 	}
