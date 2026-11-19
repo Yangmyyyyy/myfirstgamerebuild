@@ -37,6 +37,10 @@ int main()
 	float playerDushSpeed = 300.0f;
 	float playercurSpeed;
 	Rectangle wall(650, 180, 40, 240);
+	Rectangle enemy(250, 250, 40, 40);
+	const int playerMaxHealth = 100;     // 最大血量固定为 100
+	int playerHealth = playerMaxHealth; // 初始满血，受伤时修改当前血量
+	float damageCooldown = 0.0f; // 距离下次允许受伤还剩几秒，初始为 0，允许立即受伤
 	while (!WindowShouldClose())
 	{
 		// raylib 的 GetFrameTime() 返回上一帧耗时（秒）。每轮重新读取，注意变量名大小写。
@@ -45,6 +49,10 @@ int main()
 		// 固定时间步是另一种更新方式。当前移动用实际帧耗时。
 		float deltaTime = GetFrameTime(); // 保存上一帧耗时，单位是秒
 		// 方向每帧从零开始。四个独立 if 可以同时成立，屏幕 x 向右增大，y 向下增大。
+		if (damageCooldown > 0)
+		{
+			damageCooldown -= deltaTime; // 每帧减少冷却时间
+		}
 		float directionX = 0.0f;
 		float directionY = 0.0f;
 		if (IsKeyDown(KEY_D))
@@ -67,8 +75,8 @@ int main()
 		float directionLength = std::sqrt(directionX * directionX + directionY * directionY);
 		if (directionLength > 1)
 		{
-			directionX  = directionX / directionLength;
-			directionY  = directionY / directionLength;// 斜走时缩小两个方向分量，保持总速度一致
+			directionX = directionX / directionLength;
+			directionY = directionY / directionLength;// 斜走时缩小两个方向分量，保持总速度一致
 		}
 		playerX += directionX * playercurSpeed * deltaTime;
 		bool hitWallOnX = CheckCollisionCircleRec({ playerX, playerY }, playerRadius, wall);
@@ -78,10 +86,10 @@ int main()
 		bool hitWallOnY = CheckCollisionCircleRec({ playerX, playerY }, playerRadius, wall);
 		if (hitWallOnY == true)
 			playerY = oldY;
-        // 移动后先限制圆心。左、上留一个半径，右、下用窗口尺寸减半径。
-        // raylib 默认在 EndDrawing 处理输入。把更新写在它后面也能赶上下次绘制。
-        // 边界修正要在画圆前执行，否则画出的这一帧可能已经出界。
-        if (playerX <= playerRadius)
+		// 移动后先限制圆心。左、上留一个半径，右、下用窗口尺寸减半径。
+		// raylib 默认在 EndDrawing 处理输入。把更新写在它后面也能赶上下次绘制。
+		// 边界修正要在画圆前执行，否则画出的这一帧可能已经出界。
+		if (playerX <= playerRadius)
 			playerX = playerRadius;
 		if (playerX >= screenWidth - playerRadius)
 			playerX = screenWidth - playerRadius;
@@ -90,16 +98,29 @@ int main()
 		if (playerY >= screenHeight - playerRadius)
 			playerY = screenHeight - playerRadius;
 		bool isTouchingWall = hitWallOnX || hitWallOnY; // 任一方向撞墙，这一帧就显示绿圆 // 把圆和墙是否重叠的结果存下来，等会儿用它决定墙的颜色
-        BeginDrawing();
-		DrawRectangleRec(wall, RED);
+		bool isTouchingEnemy = CheckCollisionCircleRec({ playerX, playerY }, playerRadius, enemy);
+		if (isTouchingEnemy == true && damageCooldown <= 0)
+		{
+			playerHealth -= 10;
+			damageCooldown = 1.0f; // 设置受伤冷却时间
+		}
+		if (playerHealth <= 0 )
+			playerHealth = 0;
+		BeginDrawing();
 		ClearBackground(SKYBLUE);
+		DrawText(TextFormat("Health: %d", playerHealth), 20, 20, 24, BLACK);
+		// %d 留出一个整数位置，用 playerHealth 当前的值填进去
+		DrawRectangleRec(wall, RED);
+		DrawRectangleRec(enemy, BLUE);
 		// DrawCircle 接收两个整数坐标，DrawCircleV 接收含两个 float 的 Vector2。
 		// 用 {playerX, playerY} 组成一对坐标。写成 (playerX, playerY) 只会得到逗号右边的值。
-		if (isTouchingWall == false)
-		    DrawCircleV({ playerX,playerY }, playerRadius, YELLOW);
+		if (isTouchingWall == true)
+		    DrawCircleV({ playerX,playerY }, playerRadius, GREEN);
+		else if (isTouchingEnemy == true)
+			DrawCircleV({ playerX, playerY }, playerRadius, RED);
 		else
 		{
-			DrawCircleV({ playerX,playerY }, playerRadius, GREEN);
+			DrawCircleV({ playerX,playerY }, playerRadius, WHITE);
 		}
 		EndDrawing();
 	}
