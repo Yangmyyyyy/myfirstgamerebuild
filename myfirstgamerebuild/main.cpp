@@ -63,6 +63,7 @@ int main()
 	Rectangle enemy = { 250, 350, 40, 40 };
 	const int playerMaxHealth = 100;     // 最大血量固定为 100
 	int playerHealth = playerMaxHealth; // 初始满血，受伤时修改当前血量
+	int airJumpsLeft = 1; // 剩余空中跳跃次数，落地后恢复为 1
 	float damageCooldown = 0.0f; // 距离下次允许受伤还剩几秒，初始为 0，允许立即受伤
 	float dashTimeLeft = 0.0f; // 这次冲刺还剩多少秒，归零时结束冲刺
 	float dashCooldown = 0.0f; // 距离下次允许冲刺还剩多少秒
@@ -88,6 +89,7 @@ int main()
 			dashTimeLeft = 0.0f; // 重开时清掉上一次游戏留下的冲刺时间
 			dashCooldown = 0.0f; // 重开时清掉上一次游戏留下的冲刺冷却时间
 			dashInvincibleTime = 0.0f; // 新一局从没有冲刺无敌的状态开始
+			airJumpsLeft = 1; // 新一局从一次空中跳跃机会开始
 		}
 		if (damageCooldown > 0)
 		{
@@ -101,10 +103,15 @@ int main()
 			playercurSpeed = playerNormalSpeed;
 		if (playerHealth > 0)
 		{
-			if (IsKeyPressed(KEY_SPACE) && isGrounded)
+			if (IsKeyPressed(KEY_SPACE) && (isGrounded || airJumpsLeft > 0))
 			{
-				velocityY = -400.0f; // 给一次向上的速度，负数表示向上
-				isGrounded = false; // 起跳后立即进入空中状态
+				if (!isGrounded)
+				{
+					airJumpsLeft -= 1; // 已在空中，这次跳跃消耗一次空中机会
+				}
+
+				velocityY = -400.0f; // 重新给向上的速度，下落时也能再次跳起
+				isGrounded = false; // 起跳后进入空中状态
 			}
 			if (IsKeyDown(KEY_A))
 				directionX -= 1.0f;
@@ -177,6 +184,7 @@ int main()
 				{
 					player.y = platforms[i].y - player.height; // 下落：脚底贴住平台顶面
 					isGrounded = true; // 只有脚踩平台才算落地
+					airJumpsLeft = 1; // 剩余空中跳跃次数，落地后恢复为 1
 				}
 				else if (velocityY < 0)
 				{
@@ -202,6 +210,7 @@ int main()
 			player.y = screenHeight - player.height;
 			velocityY = 0.0f; // 底部边界也必须同时修正速度
 			isGrounded = true;
+			airJumpsLeft = 1; // 剩余空中跳跃次数，落地后恢复为 1
 		}
 		bool isTouchingWall = hitWallOnX || hitWallOnY; // 任一方向撞墙，这一帧就显示绿圆 // 把圆和墙是否重叠的结果存下来，等会儿用它决定墙的颜色
 		bool isTouchingEnemy = CheckCollisionRecs(player, enemy);
@@ -227,13 +236,17 @@ int main()
 			DrawRectangleRec(platforms[i], RED);
 		}
 		DrawRectangleRec(enemy, BLUE);
-		DrawRectangleRec(player, WHITE); // 显示与碰撞使用同一个矩形
-		if (isDead == true)
+		// 把剩余无敌时间分成每档 0.08 秒，转换为整数档位
+		int flashStep = static_cast<int>(dashInvincibleTime / 0.08f);
+		int flashStep2 = static_cast<int>(damageCooldown / 0.08f);
+		if (dashInvincibleTime > 0 && flashStep % 2 == 0 || damageCooldown > 0 && flashStep2 % 2 == 0)
 		{
-			DrawText("U DEAD", screenWidth / 2 - 100, screenHeight / 2 - 50, 50, RED);
-			DrawText("PRESS [R] TO RESTART", screenWidth / 2 - 300, screenHeight / 2 , 50, RED);
+			DrawRectangleRec(player, YELLOW); // 无敌期间，偶数档画黄色
 		}
-		DrawRectangleRec(player, WHITE);
+		else
+		{
+			DrawRectangleRec(player, WHITE); // 奇数档或无敌结束后画白色
+		}
 		if (facingDirection > 0)
 		{
 			// 朝右：眼睛放在身体右侧，距离右边缘 8 像素
@@ -243,6 +256,11 @@ int main()
 		{
 			// 朝左：眼睛放在身体左侧，距离左边缘 8 像素
 			DrawCircleV({ player.x + 8.0f, player.y + 12.0f }, 3.0f, BLACK);
+		}
+		if (isDead == true)
+		{
+			DrawText("U DEAD", screenWidth / 2 - 100, screenHeight / 2 - 50, 50, RED);
+			DrawText("PRESS [R] TO RESTART", screenWidth / 2 - 300, screenHeight / 2, 50, RED);
 		}
 		EndDrawing();
 	}
