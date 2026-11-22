@@ -47,6 +47,7 @@ int main()
 	InitWindow(screenWidth,screenHeight,"My First Game");
 	// Rectangle 的 x/y 是左上角。减去一半宽高，让矩形中心仍在窗口中央。
 	Rectangle player = { (screenWidth - playerWidth) / 2.0f, (screenHeight - playerHeight) / 2.0f, playerWidth, playerHeight };
+	float facingDirection = 1.0f; // 初始朝右，放在循环外以保留方向
 	float velocityY = 0.0f;       // 当前纵向速度，单位是像素/秒，正数向下，负数向上
 	bool isGrounded = false; // 玩家是否已经落地，初始在空中
 	const float gravity = 900.0f; // 重力加速度，每秒让向下速度增加 900 像素/秒，之后可调手感
@@ -101,6 +102,10 @@ int main()
 				directionX -= 1.0f;
 			if (IsKeyDown(KEY_D))
 				directionX += 1.0f;
+			if (directionX != 0)
+			{
+				facingDirection = directionX; // 有左右输入才更新，松手后保留最后朝向
+			}
 		}
 
 		// 每轴先尝试移动，再将矩形贴到挡路平台的表面。
@@ -182,6 +187,17 @@ int main()
 		{
 			DrawText("U DEAD", screenWidth / 2 - 100, screenHeight / 2 - 50, 50, RED);
 			DrawText("PRESS [R] TO RESTART", screenWidth / 2 - 300, screenHeight / 2 , 50, RED);
+		}
+		DrawRectangleRec(player, WHITE);
+		if (facingDirection > 0)
+		{
+			// 朝右：眼睛放在身体右侧，距离右边缘 8 像素
+			DrawCircleV({ player.x + player.width - 8.0f, player.y + 12.0f }, 3.0f, BLACK);
+		}
+		else
+		{
+			// 朝左：眼睛放在身体左侧，距离左边缘 8 像素
+			DrawCircleV({ player.x + 8.0f, player.y + 12.0f }, 3.0f, BLACK);
 		}
 		EndDrawing();
 	}
