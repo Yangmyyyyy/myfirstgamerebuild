@@ -64,6 +64,10 @@ int main()
 	const int playerMaxHealth = 100;     // 最大血量固定为 100
 	int playerHealth = playerMaxHealth; // 初始满血，受伤时修改当前血量
 	float damageCooldown = 0.0f; // 距离下次允许受伤还剩几秒，初始为 0，允许立即受伤
+	float dashTimeLeft = 0.0f; // 这次冲刺还剩多少秒，归零时结束冲刺
+	float dashCooldown = 0.0f; // 距离下次允许冲刺还剩多少秒
+	float dashDirection = 1.0f; // 保存本次冲刺方向，冲刺期间保持不变
+	const float dashSpeed = 600.0f; // 冲刺速度，单位是像素/秒
 	while (!WindowShouldClose())
 	{
 		// raylib 的 GetFrameTime() 返回上一帧耗时（秒）。每轮重新读取，注意变量名大小写。
@@ -80,6 +84,8 @@ int main()
 			isGrounded = false; // 重开后从空中重新检查落地
 			damageCooldown = 0.0f; // 重置受伤冷却时间
 			velocityY = 0.0f; // 重开时清掉上一次游戏留下的纵向速度
+			dashTimeLeft = 0.0f; // 重开时清掉上一次游戏留下的冲刺时间
+			dashCooldown = 0.0f; // 重开时清掉上一次游戏留下的冲刺冷却时间
 		}
 		if (damageCooldown > 0)
 		{
@@ -107,19 +113,46 @@ int main()
 				facingDirection = directionX; // 有左右输入才更新，松手后保留最后朝向
 			}
 		}
+		if (dashTimeLeft > 0)
+		{
+			dashTimeLeft -= deltaTime;
+		}
+		if (dashCooldown > 0)
+		{
+			dashCooldown -= deltaTime;
+		}
+		if (IsKeyPressed(KEY_C) && dashCooldown <= 0 && playerHealth > 0)
+		{
+			dashTimeLeft = 0.4f; // 设置冲刺持续时间
+			dashCooldown = 0.8f; // 设置冲刺冷却时间
+			dashDirection = facingDirection; // 发动时复制当前面向，锁定本次冲刺方向
+		}
 
 		// 每轴先尝试移动，再将矩形贴到挡路平台的表面。
-		player.x += directionX * playercurSpeed * deltaTime;
+		float moveX = directionX * playercurSpeed * deltaTime; // 默认使用普通横移
+
+		if (dashTimeLeft > 0 && playerHealth > 0)
+		{
+			moveX = dashDirection * dashSpeed * deltaTime; // 冲刺时改用锁定方向的位移
+		}
+
+		player.x += moveX; // 本帧只执行一次横向移动
 		bool hitWallOnX = false; // 放在循环外，后面的变色判断也能使用
 		for (int i = 0; i < 3; i++)
 		{
 			if (CheckCollisionRecs(player, platforms[i]))
 			{
 				hitWallOnX = true; // 碰到任意一块平台，就记录下来
-				if (directionX > 0)
+				if (moveX > 0)      // 本帧实际往右移动
+				{
 					player.x = platforms[i].x - player.width; // 向右撞墙，右边贴住墙左边
-				else if (directionX < 0)
+					dashTimeLeft = 0.0f; // 横向撞到平台，立即结束本次冲刺
+				}
+				else if (moveX < 0) // 本帧实际往左移动
+				{
 					player.x = platforms[i].x + platforms[i].width; // 向左撞墙，左边贴住墙右边
+					dashTimeLeft = 0.0f; // 横向撞到平台，立即结束本次冲刺
+				}
 				break;            // 找到挡路的平台后停止检查
 			}
 		}
@@ -172,7 +205,10 @@ int main()
 		if (playerHealth <= 0 )
 			playerHealth = 0;
 		bool isDead = (playerHealth <= 0);
-
+		if (isDead)
+		{
+			dashTimeLeft = 0.0f; // 这一帧扣血后若已死亡，结束剩余冲刺
+		}
 		BeginDrawing();
 		ClearBackground(SKYBLUE);
 		DrawText(TextFormat("Health: %d", playerHealth), 20, 20, 24, BLACK);
