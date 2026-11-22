@@ -60,7 +60,7 @@ int main()
 	{ 200, 430, 160, 20 }, // 较低的平台
 	{ 430, 330, 160, 20 }  // 较高的平台
 	};
-	Rectangle enemy = { 250, 250, 40, 40 };
+	Rectangle enemy = { 250, 350, 40, 40 };
 	const int playerMaxHealth = 100;     // 最大血量固定为 100
 	int playerHealth = playerMaxHealth; // 初始满血，受伤时修改当前血量
 	float damageCooldown = 0.0f; // 距离下次允许受伤还剩几秒，初始为 0，允许立即受伤
@@ -68,6 +68,7 @@ int main()
 	float dashCooldown = 0.0f; // 距离下次允许冲刺还剩多少秒
 	float dashDirection = 1.0f; // 保存本次冲刺方向，冲刺期间保持不变
 	const float dashSpeed = 600.0f; // 冲刺速度，单位是像素/秒
+	float dashInvincibleTime = 0.0f; // 冲刺无敌还剩多少秒，初始没有无敌
 	while (!WindowShouldClose())
 	{
 		// raylib 的 GetFrameTime() 返回上一帧耗时（秒）。每轮重新读取，注意变量名大小写。
@@ -86,6 +87,7 @@ int main()
 			velocityY = 0.0f; // 重开时清掉上一次游戏留下的纵向速度
 			dashTimeLeft = 0.0f; // 重开时清掉上一次游戏留下的冲刺时间
 			dashCooldown = 0.0f; // 重开时清掉上一次游戏留下的冲刺冷却时间
+			dashInvincibleTime = 0.0f; // 新一局从没有冲刺无敌的状态开始
 		}
 		if (damageCooldown > 0)
 		{
@@ -121,13 +123,19 @@ int main()
 		{
 			dashCooldown -= deltaTime;
 		}
+		if (dashInvincibleTime > 0)
+		{
+			dashInvincibleTime -= deltaTime;
+		}	
+		if  (dashInvincibleTime <= 0)
+			dashInvincibleTime = 0.0f; // 避免负数，方便后续判断
 		if (IsKeyPressed(KEY_C) && dashCooldown <= 0 && playerHealth > 0)
 		{
 			dashTimeLeft = 0.4f; // 设置冲刺持续时间
 			dashCooldown = 0.8f; // 设置冲刺冷却时间
+			dashInvincibleTime = 0.4f; // 设置冲刺无敌时间
 			dashDirection = facingDirection; // 发动时复制当前面向，锁定本次冲刺方向
 		}
-
 		// 每轴先尝试移动，再将矩形贴到挡路平台的表面。
 		float moveX = directionX * playercurSpeed * deltaTime; // 默认使用普通横移
 
@@ -197,7 +205,7 @@ int main()
 		}
 		bool isTouchingWall = hitWallOnX || hitWallOnY; // 任一方向撞墙，这一帧就显示绿圆 // 把圆和墙是否重叠的结果存下来，等会儿用它决定墙的颜色
 		bool isTouchingEnemy = CheckCollisionRecs(player, enemy);
-		if (isTouchingEnemy == true && damageCooldown <= 0)
+		if (isTouchingEnemy == true && damageCooldown <= 0 && dashInvincibleTime == 0)
 		{
 			playerHealth -= 10;
 			damageCooldown = 1.0f; // 设置受伤冷却时间
@@ -208,6 +216,7 @@ int main()
 		if (isDead)
 		{
 			dashTimeLeft = 0.0f; // 这一帧扣血后若已死亡，结束剩余冲刺
+			dashInvincibleTime = 0.0f; // 同时结束冲刺无敌
 		}
 		BeginDrawing();
 		ClearBackground(SKYBLUE);
