@@ -36,17 +36,42 @@
 // 明天先讲 break（尚未理解），再实测平台、整理W/S和重开速度、接落地状态与跳跃。
 // 重做 Day07：玩家现为40×40矩形，x/y表示左上角。平台与敌人使用CheckCollisionRecs。
 // 分轴碰撞把身体贴到平台边缘；下落落地和上升顶头分别处理，只有落地设isGrounded。
+// Day07 收尾（2026-11-22）：以下是当前实现；上面的 Day03～06 注释保留当时学习过程。
+// break 只退出本次最内层 for；下一帧 while 再次执行 for 时，i 从 0 重新开始。
+// 已移除 W/S 和二维归一化；当前左右输入为 -1/0/1。重开时也清零纵向速度。
+// isGrounded 先清 false，再由本帧下落碰平台设 true；顶头只清速度，不算落地。
+// facingDirection 在循环外保留；没有左右输入时不覆盖，A+D 抵消时保持原朝向。
+// C 是单次冲刺：600 像素/秒、持续0.4秒、冷却0.8秒、无敌0.4秒，均为当前测试值。
+// 发动时复制方向；先计算 moveX，冲刺时覆盖普通位移，最后仅执行一次横移。
+// 冲刺倒计时在发动前更新；无敌时间<=0归零，因此后面用==0判断当前是有效的。
+// 撞平台结束冲刺；死亡与 R 重开清理状态。地图端点目前只修位置，没有单独取消冲刺。
+// 闪烁：剩余时间/0.08 转整数后 %2 分奇偶；&& 先于 ||。身体重复绘制会覆盖前一次颜色。
+// 二段跳：地面跳不消耗空跳，空中可再跳一次；落地/R恢复次数，顶头不恢复。
+// 赋值 airJumpsLeft=1 修改原变量；在内层加 int 会声明同名新变量，遮蔽外层。
+// 松空格且仍上升时速度乘0.5，可降低跳高；轻按/长按差异还需专项复测。
+// 离地宽限0.1秒：地面刷新，空中倒计时，起跳立即清零，快速再按只能消耗一次空跳。
+// if 内给外部变量赋值不会缩短它的寿命；velocityY==0也可能是空中最高点，不能表示落地。
+// 窗口1000宽，世界3000宽；地面和边界使用世界宽，镜头仅改变显示，不移动世界坐标。
+// Camera2D：target关注世界位置，offset决定屏幕位置；移动完成后更新镜头，绘制读取新位置。
+// BeginMode2D/EndMode2D包住所有世界物体；血量等HUD在模式外，使用固定窗口坐标。
+// 镜头横向限制500～2500；死区试验已按要求撤回，当前直接跟随。跟随已试玩通过。
+// 待做：专项复测宽限与短跳；选一套许可明确的素材；攻击/AI/弹反/破防/处决尚未实现。
 int main()
 {
 	// 宽高传给 InitWindow 后决定绘图区的像素尺寸。坐标加 1 就沿对应轴移动一个像素单位。
 	// 玩家绘制和碰撞共用宽高，边界限制也按这份尺寸计算。
 	const int screenWidth = 1000;
 	const int screenHeight = 600;
+	const float worldWidth = 3000.0f; // 整个关卡的宽度，窗口每次只能显示其中一部分
 	const float playerWidth = 40.0f;  // 碰撞体宽度，像素
 	const float playerHeight = 40.0f; // 碰撞体高度，像素
 	InitWindow(screenWidth,screenHeight,"My First Game");
 	// Rectangle 的 x/y 是左上角。减去一半宽高，让矩形中心仍在窗口中央。
 	Rectangle player = { (screenWidth - playerWidth) / 2.0f, (screenHeight - playerHeight) / 2.0f, playerWidth, playerHeight };
+	Camera2D camera = {}; // 各项先初始化为零
+	camera.offset = { screenWidth / 2.0f, 0.0f }; // 跟随目标显示在窗口横向中央
+	camera.target = { player.x + player.width / 2.0f, 0.0f }; // 关注玩家中心的横坐标
+	camera.zoom = 1.0f; // 原尺寸显示，暂不缩放
 	float facingDirection = 1.0f; // 初始朝右，放在循环外以保留方向
 	float velocityY = 0.0f;       // 当前纵向速度，单位是像素/秒，正数向下，负数向上
 	bool isGrounded = false; // 玩家是否已经落地，初始在空中
@@ -56,7 +81,7 @@ int main()
 	float playerDushSpeed = 300.0f;
 	float playercurSpeed;
 	Rectangle platforms[] = {
-	{ 0, 550, 1000, 50 }, // 地面，左上角 (0,550)，宽1000、高50
+	{ 0, 550, worldWidth, 50 }, // 地面，左上角 (0,550)，宽 worldWidth（3000）、高50
 	{ 200, 430, 160, 20 }, // 较低的平台
 	{ 430, 330, 160, 20 }  // 较高的平台
 	};
@@ -64,6 +89,7 @@ int main()
 	const int playerMaxHealth = 100;     // 最大血量固定为 100
 	int playerHealth = playerMaxHealth; // 初始满血，受伤时修改当前血量
 	int airJumpsLeft = 1; // 剩余空中跳跃次数，落地后恢复为 1
+	float coyoteTimeLeft = 0.0f; // 离开地面后，还允许地面起跳的剩余时间
 	float damageCooldown = 0.0f; // 距离下次允许受伤还剩几秒，初始为 0，允许立即受伤
 	float dashTimeLeft = 0.0f; // 这次冲刺还剩多少秒，归零时结束冲刺
 	float dashCooldown = 0.0f; // 距离下次允许冲刺还剩多少秒
@@ -90,6 +116,15 @@ int main()
 			dashCooldown = 0.0f; // 重开时清掉上一次游戏留下的冲刺冷却时间
 			dashInvincibleTime = 0.0f; // 新一局从没有冲刺无敌的状态开始
 			airJumpsLeft = 1; // 新一局从一次空中跳跃机会开始
+			coyoteTimeLeft = 0.0f; // 重开时清除上一局的宽限时间
+		}
+		if (isGrounded)
+		{
+			coyoteTimeLeft = 0.1f; // 站在地面上，持续准备好 0.1 秒宽限
+		}
+		else if (coyoteTimeLeft > 0)
+		{
+			coyoteTimeLeft -= deltaTime; // 已经离地，逐帧消耗宽限时间
 		}
 		if (damageCooldown > 0)
 		{
@@ -103,15 +138,21 @@ int main()
 			playercurSpeed = playerNormalSpeed;
 		if (playerHealth > 0)
 		{
-			if (IsKeyPressed(KEY_SPACE) && (isGrounded || airJumpsLeft > 0))
+			if (IsKeyPressed(KEY_SPACE) &&
+				(isGrounded || coyoteTimeLeft > 0 || airJumpsLeft > 0))
 			{
-				if (!isGrounded)
+				if (!isGrounded && coyoteTimeLeft <= 0)
 				{
-					airJumpsLeft -= 1; // 已在空中，这次跳跃消耗一次空中机会
+					airJumpsLeft -= 1; // 已离地且宽限结束，才消耗空中跳跃次数
 				}
 
-				velocityY = -400.0f; // 重新给向上的速度，下落时也能再次跳起
-				isGrounded = false; // 起跳后进入空中状态
+				velocityY = -400.0f;  // 设置起跳速度
+				isGrounded = false;   // 起跳后进入空中状态
+				coyoteTimeLeft = 0.0f; // 本次起跳用完地面机会，避免再次免费跳
+			}
+			if (IsKeyReleased(KEY_SPACE) && velocityY < 0)
+			{
+				velocityY *= 0.5f; // 上升中松开空格，把剩余向上速度减半
 			}
 			if (IsKeyDown(KEY_A))
 				directionX -= 1.0f;
@@ -152,7 +193,7 @@ int main()
 		}
 
 		player.x += moveX; // 本帧只执行一次横向移动
-		bool hitWallOnX = false; // 放在循环外，后面的变色判断也能使用
+		bool hitWallOnX = false; // 放在循环外，保留本帧横向碰撞结果
 		for (int i = 0; i < 3; i++)
 		{
 			if (CheckCollisionRecs(player, platforms[i]))
@@ -174,7 +215,7 @@ int main()
 		velocityY += gravity * deltaTime; // 重力先改变纵向速度
 		player.y += velocityY * deltaTime; // 再用纵向速度计算这一帧的位移
 		isGrounded = false; // 本帧重新检查脚下支撑，避免走出平台后仍保持落地状态
-		bool hitWallOnY = false; // 循环外保存结果，后面的变色判断也要用
+		bool hitWallOnY = false; // 循环外保存本帧纵向碰撞结果
 		for (int i = 0; i < 3; i++)
 		{
 			if (CheckCollisionRecs(player, platforms[i]))
@@ -197,8 +238,8 @@ int main()
 		// 矩形用左上角定位：右边是 x+width，脚底是 y+height。
 		if (player.x < 0)
 			player.x = 0;
-		if (player.x > screenWidth - player.width)
-			player.x = screenWidth - player.width;
+		if (player.x > worldWidth - player.width)
+			player.x = worldWidth - player.width; // 限制在关卡右端
 		if (player.y < 0)
 		{
 			player.y = 0;
@@ -212,7 +253,7 @@ int main()
 			isGrounded = true;
 			airJumpsLeft = 1; // 剩余空中跳跃次数，落地后恢复为 1
 		}
-		bool isTouchingWall = hitWallOnX || hitWallOnY; // 任一方向撞墙，这一帧就显示绿圆 // 把圆和墙是否重叠的结果存下来，等会儿用它决定墙的颜色
+		bool isTouchingWall = hitWallOnX || hitWallOnY; // 合并两轴结果；当前闪烁绘制未使用此变量
 		bool isTouchingEnemy = CheckCollisionRecs(player, enemy);
 		if (isTouchingEnemy == true && damageCooldown <= 0 && dashInvincibleTime == 0)
 		{
@@ -227,10 +268,20 @@ int main()
 			dashTimeLeft = 0.0f; // 这一帧扣血后若已死亡，结束剩余冲刺
 			dashInvincibleTime = 0.0f; // 同时结束冲刺无敌
 		}
+		camera.target.x = player.x + player.width / 2.0f; // 每帧直接跟随玩家中心
+		if (camera.target.x < screenWidth / 2.0f)
+		{
+			camera.target.x = screenWidth / 2.0f; // 左端停住，窗口左边刚好对齐地图左边
+		}
+
+		if (camera.target.x > worldWidth - screenWidth / 2.0f)
+		{
+			camera.target.x = worldWidth - screenWidth / 2.0f; // 右端停住，避免看到地图右侧外面
+		}
 		BeginDrawing();
 		ClearBackground(SKYBLUE);
-		DrawText(TextFormat("Health: %d", playerHealth), 20, 20, 24, BLACK);
-		// %d 留出一个整数位置，用 playerHealth 当前的值填进去
+		BeginMode2D(camera); // 开始用镜头显示地图里的物体
+		// 你现有的平台、敌人、玩家和眼睛绘制代码放在这里
 		for (int i = 0; i < 3; i++)
 		{
 			DrawRectangleRec(platforms[i], RED);
@@ -257,11 +308,14 @@ int main()
 			// 朝左：眼睛放在身体左侧，距离左边缘 8 像素
 			DrawCircleV({ player.x + 8.0f, player.y + 12.0f }, 3.0f, BLACK);
 		}
+		EndMode2D(); // 后面的文字恢复使用窗口坐标
 		if (isDead == true)
 		{
 			DrawText("U DEAD", screenWidth / 2 - 100, screenHeight / 2 - 50, 50, RED);
 			DrawText("PRESS [R] TO RESTART", screenWidth / 2 - 300, screenHeight / 2, 50, RED);
 		}
+		DrawText(TextFormat("Health: %d", playerHealth), 20, 20, 24, BLACK);
+		// %d 留出一个整数位置，用 playerHealth 当前的值填进去
 		EndDrawing();
 	}
 	CloseWindow();
