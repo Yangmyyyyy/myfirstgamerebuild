@@ -406,7 +406,9 @@ int main()
 		if (motion == Walk) animation = 1;
 		else if (motion == Run || motion == Rise || motion == Fall) animation = 2;
 		else if (motion == Dash) animation = 3;
-		float frameSeconds = motion == Idle ? 0.18f : (motion == Run ? 0.075f : 0.11f);
+		float frameSeconds = 0.11f; // 行走保持原来的节奏
+		if (motion == Idle) frameSeconds = 0.18f; // 待机保持缓慢呼吸
+		else if (motion == Run) frameSeconds = 0.10f; // 跑步从0.075调慢，六帧一轮0.60秒，不改变移动速度
 		int frame = static_cast<int>(animationTime / frameSeconds) % 6;
 		if (motion == Dash)
 		{
@@ -423,11 +425,16 @@ int main()
 			Rectangle source = animationFrames[animation][frame];
 			float width = source.width * spriteScale;
 			float height = source.height * spriteScale;
+			// 只修正外观：落地时靴底略压入草面，避免贴图边缘留白显得悬空。
+			float footOffset = isGrounded ? 3.0f : 0.0f;
+			if (isGrounded)
+				DrawEllipse(static_cast<int>(player.x + player.width / 2),
+					static_cast<int>(player.y + player.height + 2), 14, 2, Fade(BLACK, 0.20f)); // 脚边接触阴影，先画在角色下面
 			float look = motion == Dash ? dashDirection : facingDirection;
 			if (look < 0) source.width = -source.width; // 负截取宽度实现水平翻转，不需重复保存左向图片
 			DrawTexturePro(knightTexture, source,
-				{ player.x + player.width / 2 - width / 2, player.y + player.height - height, width, height },
-				{ 0, 0 }, 0, tint); // 图片脚底对齐碰撞体脚底
+				{ player.x + player.width / 2 - width / 2, player.y + player.height - height + footOffset, width, height },
+				{ 0, 0 }, 0, tint); // 图片脚底在碰撞体脚底基础上增加视觉偏移，物理不变
 		}
 		else DrawRectangleRec(player, tint); // 素材丢失时保留矩形，游戏仍可检查
 		if (IsKeyPressed(KEY_F1)) showCollision = !showCollision;
