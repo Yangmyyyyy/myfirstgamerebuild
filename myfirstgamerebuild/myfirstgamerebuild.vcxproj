@@ -140,9 +140,28 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="模块阅读说明.txt" />
     <None Include="PlayerVisual阅读说明.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="World.cpp" />
+    <ClCompile Include="Collision.cpp" />
+    <ClInclude Include="World.h" />
+    <ClInclude Include="Collision.h" />
+    <ClInclude Include="GameConfig.h" />
+    <ClInclude Include="PlayerInput.h" />
+    <ClCompile Include="PlayerInput.cpp" />
+    <ClInclude Include="Enemy.h" />
+    <ClCompile Include="Enemy.cpp" />
+    <ClInclude Include="Combat.h" />
+    <ClCompile Include="Combat.cpp" />
+    <ClInclude Include="Player.h" />
+    <ClCompile Include="Player.cpp" />
+    <ClInclude Include="CameraController.h" />
+    <ClCompile Include="CameraController.cpp" />
+    <ClInclude Include="Hud.h" />
+    <ClCompile Include="Hud.cpp" />
+    <None Include="历史学习注释.txt" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="PlayerVisual.cpp" />
   </ItemGroup>
