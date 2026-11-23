@@ -121,6 +121,32 @@ int main()
 	}
 	UnloadImage(knightImage); // 图片已上传为纹理，释放 CPU 侧图片内存
 	SetTextureFilter(knightTexture, TEXTURE_FILTER_POINT); // 像素图使用最近邻采样
+	// 跑步单独用修正换腿的图集，不改已经认可的待机、行走与冲刺图片。
+	Image runImage = LoadImage((resourceDir / "knight_run_v3.png").string().c_str());
+	Texture2D runTexture = LoadTextureFromImage(runImage);
+	Rectangle runFrames[6] = {};
+	float runScale = 1.0f;
+	if (runImage.data != nullptr)
+	{
+		float maxHeight = 1.0f;
+		for (int frame = 0; frame < 6; frame++)
+		{
+			int column = frame % 3; // 六帧按三列两行保存
+			int row = frame / 3;
+			int left = column * runImage.width / 3;
+			int top = row * runImage.height / 2;
+			Image part = ImageFromImage(runImage, { static_cast<float>(left), static_cast<float>(top),
+				static_cast<float>((column + 1) * runImage.width / 3 - left),
+				static_cast<float>((row + 1) * runImage.height / 2 - top) });
+			Rectangle bounds = GetImageAlphaBorder(part, 0.1f);
+			runFrames[frame] = { left + bounds.x, top + bounds.y, bounds.width, bounds.height };
+			if (bounds.height > maxHeight) maxHeight = bounds.height;
+			UnloadImage(part);
+		}
+		runScale = 72.0f / maxHeight; // 跑步身体前倾，外观略低于76像素的站姿
+	}
+	UnloadImage(runImage);
+	SetTextureFilter(runTexture, TEXTURE_FILTER_POINT);
 	float animationTime = 0.0f; // 跨帧保存动画播放进度
 	int previousAnimation = -1;
 	enum Motion { Idle, Walk, Run, Dash, Rise, Fall, Dead }; // 动作名称比数字更方便理解
@@ -423,8 +449,16 @@ int main()
 		if (knightTexture.id != 0)
 		{
 			Rectangle source = animationFrames[animation][frame];
-			float width = source.width * spriteScale;
-			float height = source.height * spriteScale;
+			Texture2D activeTexture = knightTexture;
+			float activeScale = spriteScale;
+			if (motion == Run && runTexture.id != 0)
+			{
+				source = runFrames[frame]; // 只有跑步换成左右腿交替的六帧
+				activeTexture = runTexture;
+				activeScale = runScale;
+			}
+			float width = source.width * activeScale;
+			float height = source.height * activeScale;
 			// 只修正外观：落地时靴底略压入草面，避免贴图边缘留白显得悬空。
 			float footOffset = isGrounded ? 3.0f : 0.0f;
 			if (isGrounded)
@@ -432,7 +466,7 @@ int main()
 					static_cast<int>(player.y + player.height + 2), 14, 2, Fade(BLACK, 0.20f)); // 脚边接触阴影，先画在角色下面
 			float look = motion == Dash ? dashDirection : facingDirection;
 			if (look < 0) source.width = -source.width; // 负截取宽度实现水平翻转，不需重复保存左向图片
-			DrawTexturePro(knightTexture, source,
+			DrawTexturePro(activeTexture, source,
 				{ player.x + player.width / 2 - width / 2, player.y + player.height - height + footOffset, width, height },
 				{ 0, 0 }, 0, tint); // 图片脚底在碰撞体脚底基础上增加视觉偏移，物理不变
 		}
@@ -451,6 +485,7 @@ int main()
 		// %d 留出一个整数位置，用 playerHealth 当前的值填进去
 		EndDrawing();
 	}
+	UnloadTexture(runTexture); // 释放单独的跑步图集
 	UnloadTexture(knightTexture); // 窗口关闭前释放显存资源
 	UnloadTexture(forestTexture);
 	UnloadTexture(terrainTexture);

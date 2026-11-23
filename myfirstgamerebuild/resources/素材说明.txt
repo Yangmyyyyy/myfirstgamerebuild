@@ -9,3 +9,5 @@ main.cpp 初始化时读取各格透明边界，并使用统一缩放及脚底�
 terrain.png：依据用户提供的草地平台预览图，由图像生成工具整理为透明两条图集，去除黑底和手机按钮，属于参考图派生初稿，并非原素材文件的逐像素提取。顶行为厚地面，底行为薄平台；地面重复铺设，悬空平台保留左右端并延展中段。原参考作者与许可尚未提供。
 
 2026-11-23 动画v2：新图knight_motion_v2.png，独立待机/行走/跑步/冲刺，4行6列。旧图保留。由内置图像生成工具根据旧骑士图生成，透明背景。生成提示：same knight design, exactly 6 columns x 4 rows, idle breathing with both feet planted, six sequential walk cycle frames with alternating contact/passing legs, six fast-run poses, six crouch/launch/travel/brake dash poses; consistent steel blue armor, red cape, sword/shield and body scale; all face right; no text/background/grid; same feet baseline, no cropped limbs. 精灵为生成素材，帧间细节仍需人工打磨；未宣称有专用跳跃或死亡动作。
+
+跑步v3（内置图像生成工具）：knight_run_v3.png，3列2行，只替换Run；保留旧图集中的待机/行走/冲刺。生成提示：保持原骑士钢蓝盔甲红披风剑盾，六帧向右跑步，透明背景等格；1亮近腿前伸落地、2近腿支撑、3远腿前摆、4暗远腿前伸落地且近腿后伸、5远腿支撑、6近腿前摆；近腿亮远腿暗，明确两次相反落脚，禁止六帧同一腿持续在前；无文字背景，武器四肢不裁断。每0.10秒换帧。AI动画仍需试玩打磨，不能把成功切帧等同于步态已经完美。
