@@ -75,6 +75,24 @@ int main()
 		resourceDir = fs::path(GetApplicationDirectory()) / "resources";
 	}
 	Texture2D forestTexture = LoadTexture((resourceDir / "forest.png").string().c_str());
+	Image terrainImage = LoadImage((resourceDir / "terrain.png").string().c_str());
+	Texture2D terrainTexture = LoadTextureFromImage(terrainImage);
+	Rectangle terrainFrames[2] = {}; // 0为厚地面，1为薄悬空平台
+	if (terrainImage.data != nullptr)
+	{
+		int split = static_cast<int>(terrainImage.height * 0.64f); // 两条素材之间的透明间隙
+		for (int row = 0; row < 2; row++)
+		{
+			int top = row == 0 ? 0 : split;
+			int height = row == 0 ? split : terrainImage.height - split;
+			Image part = ImageFromImage(terrainImage, { 0, static_cast<float>(top), static_cast<float>(terrainImage.width), static_cast<float>(height) });
+			Rectangle bounds = GetImageAlphaBorder(part, 0.1f); // 只取草地本体，排除透明留白
+			terrainFrames[row] = { bounds.x, top + bounds.y, bounds.width, bounds.height };
+			UnloadImage(part);
+		}
+	}
+	UnloadImage(terrainImage);
+	SetTextureFilter(terrainTexture, TEXTURE_FILTER_POINT);
 	Image knightImage = LoadImage((resourceDir / "knight_actions.png").string().c_str());
 	Texture2D knightTexture = LoadTextureFromImage(knightImage);
 	Rectangle animationFrames[3][4] = {}; // 三种动作，每种四帧；此处保存图片中的截取范围
@@ -326,7 +344,41 @@ int main()
 		// 你现有的平台、敌人、玩家和眼睛绘制代码放在这里
 		for (int i = 0; i < 3; i++)
 		{
-			DrawRectangleRec(platforms[i], RED);
+			Rectangle platform = platforms[i]; // 复制仅用于绘制，原来的碰撞矩形不改
+			if (terrainTexture.id == 0)
+			{
+				DrawRectangleRec(platform, RED); // 素材丢失时保留可见的测试平台
+				continue;
+			}
+			Rectangle source = terrainFrames[i == 0 ? 0 : 1];
+			if (i == 0)
+			{
+				// 厚地面重复铺，末块只画剩余部分，避免把岩石拉成长条。
+				float tileHeight = platform.height + 8.0f;
+				float tileWidth = source.width / source.height * tileHeight;
+				for (float x = platform.x; x < platform.x + platform.width; x += tileWidth)
+				{
+					float width = tileWidth;
+					if (x + width > platform.x + platform.width) width = platform.x + platform.width - x;
+					Rectangle piece = source;
+					piece.width *= width / tileWidth;
+					DrawTexturePro(terrainTexture, piece, { x, platform.y - 8, width, tileHeight }, { 0, 0 }, 0, WHITE);
+				}
+			}
+			else
+			{
+				// 左右端各保留一块，只有中间延展；草叶可超出碰撞体，但脚底仍站在原平台顶面。
+				float sourceCap = source.width * 0.1f;
+				float cap = 16.0f;
+				float y = platform.y - 6.0f;
+				float height = platform.height + 10.0f;
+				DrawTexturePro(terrainTexture, { source.x, source.y, sourceCap, source.height },
+					{ platform.x, y, cap, height }, { 0, 0 }, 0, WHITE);
+				DrawTexturePro(terrainTexture, { source.x + sourceCap, source.y, source.width - 2 * sourceCap, source.height },
+					{ platform.x + cap, y, platform.width - 2 * cap, height }, { 0, 0 }, 0, WHITE);
+				DrawTexturePro(terrainTexture, { source.x + source.width - sourceCap, source.y, sourceCap, source.height },
+					{ platform.x + platform.width - cap, y, cap, height }, { 0, 0 }, 0, WHITE);
+			}
 		}
 		DrawRectangleRec(enemy, BLUE);
 		// 把剩余无敌时间分成每档 0.08 秒，转换为整数档位
@@ -375,6 +427,7 @@ int main()
 	}
 	UnloadTexture(knightTexture); // 窗口关闭前释放显存资源
 	UnloadTexture(forestTexture);
+	UnloadTexture(terrainTexture);
 	CloseWindow();
 	return 0;
 }
