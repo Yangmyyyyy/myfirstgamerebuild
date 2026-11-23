@@ -1,0 +1,47 @@
+角色外观拆分阅读说明（Day08，2026-11-23）
+
+这次把角色素材加载、动画状态选择、计时、绘制和纹理释放移到了PlayerVisual类。
+这是助手代做的整理，明天逐步讲解，不等于你已经独立掌握class。
+移动、平台碰撞、跳跃、冲刺规则、攻击框和敌人血量仍留在main.cpp。
+
+一、明天建议按这个顺序看
+1. PlayerVisual.h：先看public下面的Load、Update、Draw、Unload四个函数。
+2. main.cpp：搜索playerVisual.，看它们在游戏流程的什么位置被调用。
+3. PlayerVisual.cpp：先只读Draw，再读Update，最后读较长的Load图片截取循环。
+4. 暂时不用一次理解所有声明：const引用、禁用复制等会单独讲。
+
+二、类、对象、成员函数怎样对应
+class PlayerVisual是自定义类型；PlayerVisual playerVisual是创建一个对象。
+playerVisual.Load(...)表示调用这个对象的Load函数。
+PlayerVisual::Load(...)表示在.cpp里实现“属于PlayerVisual的Load函数”。
+public是外部允许调用的接口；private是对象自己管理的数据。
+现在animationTime放在private里，main不再直接改它，而是调用Update让对象自己更新。
+Load和Update也是void函数：完成工作，不直接返回结果。
+GetFrame返回int；GetMotionName返回动作名称，供F1调试文字显示。
+
+三、一帧怎样把玩家与外观连起来
+main先完成输入、移动、碰撞、接触扣血，得到最终player位置及状态。
+把落地、朝向、冲刺计时等填到PlayerVisualState里，这是传给外观类的一份快照。
+playerVisual.Update(deltaTime, visualState)选择动作、计算帧号和闪烁颜色。
+BeginMode2D(camera)后调用playerVisual.Draw(player)，按世界坐标绘制骑士。
+因此，状态和图片最终在Draw(player)这一步与玩家位置连接，不是motion自动控制玩家。
+
+四、为什么这样安排调用位置
+Load放在InitWindow之后、while之前：需要图形环境，只加载一次。
+Update放在物理和伤害处理之后、BeginDrawing之前：读取本帧最新状态，先更新再画。
+Draw放在镜头模式内：角色图像与平台同属世界坐标。
+Unload放在CloseWindow之前：显存资源要在图形环境还存在时释放。
+
+五、这次整理没有新增的内容
+攻击目前仍是J开启0.2秒可见范围，没有扣敌人血，也没有真正挥剑动画。
+攻击期间锁移动/转向、冲刺取消攻击是已确定的下一步规则，尚未写进当前游戏逻辑。
+敌人接触扣血仍保留，等敌人攻击判定完成后再移除。
+没有专用跳跃和死亡动画，仍使用现有临时姿势。
+这次只拆角色外观；背景/地形渲染仍留main，以后再逐步整理。
+
+六、验证与运行
+Debug x64编译通过，旧LNK4098运行库冲突警告仍存在。
+外观类检查通过：六帧循环、动作优先级、推墙待机、空中姿势、重复卸载/重载、缺资源矩形回退。
+真实游戏循环的模拟输入测试和截图确认骑士与地图仍显示正常。
+A/D行走、Shift加速、空格跳跃、C冲刺、J攻击框、F1调试；Visual Studio中F5运行。
+

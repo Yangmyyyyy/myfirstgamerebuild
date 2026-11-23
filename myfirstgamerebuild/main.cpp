@@ -1,5 +1,6 @@
 ﻿//raylib 专门用来开发游戏和图形程序的库
 #include "raylib.h"
+#include "PlayerVisual.h" // 角色动画的声明，具体实现见PlayerVisual.cpp
 #include <filesystem> // 查找资源目录，让 Visual Studio 和双击 exe 都能加载图片
 
 
@@ -57,6 +58,8 @@
 // BeginMode2D/EndMode2D包住所有世界物体；血量等HUD在模式外，使用固定窗口坐标。
 // 镜头横向限制500～2500；死区试验已按要求撤回，当前直接跟随。跟随已试玩通过。
 // 待做：专项复测宽限与短跳；选一套许可明确的素材；攻击/AI/弹反/破防/处决尚未实现。
+// Day08整理：外观加载/选帧/绘制/释放已移到PlayerVisual类；main保留玩法与地图。
+// 明天阅读顺序：PlayerVisual.h的public接口 → 本文件的四个调用 → PlayerVisual.cpp实现。
 int main()
 {
 	// 宽高传给 InitWindow 后决定绘图区的像素尺寸。坐标加 1 就沿对应轴移动一个像素单位。
@@ -94,63 +97,8 @@ int main()
 	}
 	UnloadImage(terrainImage);
 	SetTextureFilter(terrainTexture, TEXTURE_FILTER_POINT);
-	Image knightImage = LoadImage((resourceDir / "knight_motion_v2.png").string().c_str());
-	Texture2D knightTexture = LoadTextureFromImage(knightImage);
-	Rectangle animationFrames[4][6] = {}; // 待机、行走、跑步、冲刺，各六帧，彼此独立
-	float spriteScale = 1.0f;
-	if (knightImage.data != nullptr)
-	{
-		float maxRunHeight = 1.0f;
-		for (int row = 0; row < 4; row++)
-		{
-			for (int frame = 0; frame < 6; frame++)
-			{
-				int left = frame * knightImage.width / 6;
-				int top = row * knightImage.height / 4;
-				Rectangle cell = { static_cast<float>(left), static_cast<float>(top),
-					static_cast<float>((frame + 1) * knightImage.width / 6 - left),
-					static_cast<float>((row + 1) * knightImage.height / 4 - top) };
-				Image part = ImageFromImage(knightImage, cell);
-				Rectangle bounds = GetImageAlphaBorder(part, 0.1f); // 排除透明留白，脚底才容易对齐
-				animationFrames[row][frame] = { left + bounds.x, top + bounds.y, bounds.width, bounds.height };
-				if (row == 0 && bounds.height > maxRunHeight) maxRunHeight = bounds.height;
-				UnloadImage(part);
-			}
-		}
-		spriteScale = 76.0f / maxRunHeight; // 美术身高约76像素；40×40碰撞体仍独立保留
-	}
-	UnloadImage(knightImage); // 图片已上传为纹理，释放 CPU 侧图片内存
-	SetTextureFilter(knightTexture, TEXTURE_FILTER_POINT); // 像素图使用最近邻采样
-	// 跑步单独用修正换腿的图集，不改已经认可的待机、行走与冲刺图片。
-	Image runImage = LoadImage((resourceDir / "knight_run_v3.png").string().c_str());
-	Texture2D runTexture = LoadTextureFromImage(runImage);
-	Rectangle runFrames[6] = {};
-	float runScale = 1.0f;
-	if (runImage.data != nullptr)
-	{
-		float maxHeight = 1.0f;
-		for (int frame = 0; frame < 6; frame++)
-		{
-			int column = frame % 3; // 六帧按三列两行保存
-			int row = frame / 3;
-			int left = column * runImage.width / 3;
-			int top = row * runImage.height / 2;
-			Image part = ImageFromImage(runImage, { static_cast<float>(left), static_cast<float>(top),
-				static_cast<float>((column + 1) * runImage.width / 3 - left),
-				static_cast<float>((row + 1) * runImage.height / 2 - top) });
-			Rectangle bounds = GetImageAlphaBorder(part, 0.1f);
-			runFrames[frame] = { left + bounds.x, top + bounds.y, bounds.width, bounds.height };
-			if (bounds.height > maxHeight) maxHeight = bounds.height;
-			UnloadImage(part);
-		}
-		runScale = 72.0f / maxHeight; // 跑步身体前倾，外观略低于76像素的站姿
-	}
-	UnloadImage(runImage);
-	SetTextureFilter(runTexture, TEXTURE_FILTER_POINT);
-	float animationTime = 0.0f; // 跨帧保存动画播放进度
-	int previousAnimation = -1;
-	enum Motion { Idle, Walk, Run, Dash, Rise, Fall, Dead }; // 动作名称比数字更方便理解
-	const char* motionNames[] = { "Idle", "Walk", "Run", "Dash", "Rise", "Fall", "Dead" };
+	PlayerVisual playerVisual; // 创建角色外观对象，在循环外保留动画状态
+	playerVisual.Load(resourceDir.string().c_str()); // 图形环境已创建，加载一次图片
 	bool showCollision = false; // F1 可显示原有碰撞矩形，便于检查外观与判定的区别
 	// Rectangle 的 x/y 是左上角。减去一半宽高，让矩形中心仍在窗口中央。
 	Rectangle player = { (screenWidth - playerWidth) / 2.0f, (screenHeight - playerHeight) / 2.0f, playerWidth, playerHeight };
@@ -172,6 +120,8 @@ int main()
 	{ 430, 330, 160, 20 }  // 较高的平台
 	};
 	Rectangle enemy = { 250, 350, 40, 40 };
+	const int enemyMaxHealth = 100; // 敌人最大血量，暂定100
+	int enemyHealth = enemyMaxHealth; // 当前血量，之后攻击命中时修改
 	const int playerMaxHealth = 100;     // 最大血量固定为 100
 	int playerHealth = playerMaxHealth; // 初始满血，受伤时修改当前血量
 	int airJumpsLeft = 1; // 剩余空中跳跃次数，落地后恢复为 1
@@ -182,6 +132,8 @@ int main()
 	float dashDirection = 1.0f; // 保存本次冲刺方向，冲刺期间保持不变
 	const float dashSpeed = 600.0f; // 冲刺速度，单位是像素/秒
 	float dashInvincibleTime = 0.0f; // 冲刺无敌还剩多少秒，初始没有无敌
+	float attackTimeLeft = 0.0f; // 本次攻击还剩多少秒；0表示没有攻击
+	float attackDirection = 1.0f; // 保存本次攻击方向，1向右，-1向左
 	while (!WindowShouldClose())
 	{
 		// raylib 的 GetFrameTime() 返回上一帧耗时（秒）。每轮重新读取，注意变量名大小写。
@@ -189,6 +141,8 @@ int main()
 		// 每轮按键时累计速度乘耗时。200 × 0.016 约为 3.2 像素。之前每帧加 1 会随帧率变快。
 		// 固定时间步是另一种更新方式。当前移动用实际帧耗时。
 		float deltaTime = GetFrameTime(); // 保存上一帧耗时，单位是秒
+		if (attackTimeLeft > 0)
+			attackTimeLeft -= deltaTime; // 每帧减少已经开始的攻击时间
 		float frameStartX = player.x; // 用实际位移区分行走和推墙，不只看有没有按键
 		// 方向每帧从零开始。四个独立 if 可以同时成立，屏幕 x 向右增大，y 向下增大。
 		if (playerHealth <= 0 && IsKeyPressed(KEY_R))
@@ -264,6 +218,14 @@ int main()
 		}	
 		if  (dashInvincibleTime <= 0)
 			dashInvincibleTime = 0.0f; // 避免负数，方便后续判断
+		if (IsKeyPressed(KEY_J) &&
+			playerHealth > 0 &&
+			dashTimeLeft <= 0 &&
+			attackTimeLeft <= 0)
+		{
+			attackTimeLeft = 0.2f; // 刚按下J，开启0.2秒攻击状态
+			attackDirection = facingDirection; // 发动瞬间复制面向，本次攻击不再随转身改变
+		}
 		if (IsKeyPressed(KEY_C) && dashCooldown <= 0 && playerHealth > 0)
 		{
 			dashTimeLeft = 0.4f; // 设置冲刺持续时间
@@ -365,6 +327,31 @@ int main()
 		{
 			camera.target.x = worldWidth - screenWidth / 2.0f; // 右端停住，避免看到地图右侧外面
 		}
+		Rectangle attackBox = {
+	        player.x + player.width, // 默认放在玩家右边，紧挨身体
+        	player.y,                // 顶部暂时与玩家碰撞框对齐
+        	60.0f,                   // 向前伸出60像素
+	        player.height            // 高度暂时与玩家碰撞框相同
+		};
+
+		if (attackDirection < 0)
+		{
+			attackBox.x = player.x - attackBox.width;
+			// 朝左时，攻击框放在身体左边
+		}
+		// 物理/伤害处理完成后，再把最新结果交给外观类；它不会修改player或攻击状态。
+		PlayerVisualState visualState;
+		visualState.dead = isDead;
+		visualState.grounded = isGrounded;
+		visualState.moving = directionX != 0 && player.x != frameStartX;
+		visualState.running = IsKeyDown(KEY_LEFT_SHIFT);
+		visualState.velocityY = velocityY;
+		visualState.facingDirection = facingDirection;
+		visualState.dashDirection = dashDirection;
+		visualState.dashTimeLeft = dashTimeLeft;
+		visualState.dashInvincibleTime = dashInvincibleTime;
+		visualState.damageCooldown = damageCooldown;
+		playerVisual.Update(deltaTime, visualState); // 先更新动画，再开始绘制这一帧
 		BeginDrawing();
 		ClearBackground(SKYBLUE);
 		// 背景是远景，先在窗口坐标下绘制，裁掉原照片四周灰框；平台仍在镜头内。
@@ -411,66 +398,15 @@ int main()
 			}
 		}
 		DrawRectangleRec(enemy, BLUE);
-		// 把剩余无敌时间分成每档 0.08 秒，转换为整数档位
-		int flashStep = static_cast<int>(dashInvincibleTime / 0.08f);
-		int flashStep2 = static_cast<int>(damageCooldown / 0.08f);
-		Color tint = ((dashInvincibleTime > 0 && flashStep % 2 == 0) ||
-			(damageCooldown > 0 && flashStep2 % 2 == 0)) ? YELLOW : WHITE;
-		// 先读取物理更新后的状态，再选外观；不在这里修改碰撞或速度。
-		Motion motion = Idle;
-		bool movedHorizontally = player.x != frameStartX;
-		if (isDead) motion = Dead;
-		else if (dashTimeLeft > 0) motion = Dash;
-		else if (!isGrounded) motion = velocityY < 0 ? Rise : Fall;
-		else if (directionX != 0 && movedHorizontally)
-			motion = IsKeyDown(KEY_LEFT_SHIFT) ? Run : Walk;
+		if (attackTimeLeft > 0 && playerHealth > 0 && dashTimeLeft <= 0)
+		{
+			DrawRectangleRec(attackBox, Fade(ORANGE, 0.35f));
+			// 半透明橙色填充，方便看范围，也能看见后面的物体
 
-		// 同一动作内计时一直保留，只有切换动作才从头播放；待机也需要播放呼吸循环。
-		if (motion != previousAnimation) { animationTime = 0.0f; previousAnimation = motion; }
-		if (motion != Dead) animationTime += deltaTime;
-		int animation = 0;
-		if (motion == Walk) animation = 1;
-		else if (motion == Run || motion == Rise || motion == Fall) animation = 2;
-		else if (motion == Dash) animation = 3;
-		float frameSeconds = 0.11f; // 行走保持原来的节奏
-		if (motion == Idle) frameSeconds = 0.18f; // 待机保持缓慢呼吸
-		else if (motion == Run) frameSeconds = 0.10f; // 跑步从0.075调慢，六帧一轮0.60秒，不改变移动速度
-		int frame = static_cast<int>(animationTime / frameSeconds) % 6;
-		if (motion == Dash)
-		{
-			frame = static_cast<int>((0.4f - dashTimeLeft) / (0.4f / 6));
-			if (frame < 0) frame = 0;
-			if (frame > 5) frame = 5;
+			DrawRectangleLinesEx(attackBox, 2.0f, ORANGE);
+			// 橙色边框，线宽2像素
 		}
-		// 空中先使用收腿的独立取帧，停止在空中跑步；专用跳跃/死亡图仍待补全。
-		if (motion == Rise) frame = 1;
-		if (motion == Fall) frame = 2;
-		if (motion == Dead) frame = 0;
-		if (knightTexture.id != 0)
-		{
-			Rectangle source = animationFrames[animation][frame];
-			Texture2D activeTexture = knightTexture;
-			float activeScale = spriteScale;
-			if (motion == Run && runTexture.id != 0)
-			{
-				source = runFrames[frame]; // 只有跑步换成左右腿交替的六帧
-				activeTexture = runTexture;
-				activeScale = runScale;
-			}
-			float width = source.width * activeScale;
-			float height = source.height * activeScale;
-			// 只修正外观：落地时靴底略压入草面，避免贴图边缘留白显得悬空。
-			float footOffset = isGrounded ? 3.0f : 0.0f;
-			if (isGrounded)
-				DrawEllipse(static_cast<int>(player.x + player.width / 2),
-					static_cast<int>(player.y + player.height + 2), 14, 2, Fade(BLACK, 0.20f)); // 脚边接触阴影，先画在角色下面
-			float look = motion == Dash ? dashDirection : facingDirection;
-			if (look < 0) source.width = -source.width; // 负截取宽度实现水平翻转，不需重复保存左向图片
-			DrawTexturePro(activeTexture, source,
-				{ player.x + player.width / 2 - width / 2, player.y + player.height - height + footOffset, width, height },
-				{ 0, 0 }, 0, tint); // 图片脚底在碰撞体脚底基础上增加视觉偏移，物理不变
-		}
-		else DrawRectangleRec(player, tint); // 素材丢失时保留矩形，游戏仍可检查
+		playerVisual.Draw(player); // 在世界坐标下绘制，使用物理处理后的玩家位置
 		if (IsKeyPressed(KEY_F1)) showCollision = !showCollision;
 		if (showCollision) DrawRectangleLinesEx(player, 1.0f, LIME);
 		EndMode2D(); // 后面的文字恢复使用窗口坐标
@@ -480,13 +416,19 @@ int main()
 			DrawText("PRESS [R] TO RESTART", screenWidth / 2 - 300, screenHeight / 2, 50, RED);
 		}
 		DrawText(TextFormat("Health: %d", playerHealth), 20, 20, 24, BLACK);
+		DrawText(TextFormat("Enemy HP: %d", enemyHealth), 20, 104, 20, BLACK);
+		if (attackTimeLeft > 0)
+		{
+			DrawText("ATTACK", 20, 132, 24, ORANGE);
+			// 攻击状态持续期间显示文字，暂时用于确认按键和计时是否正常
+		}
+		// 在屏幕固定位置显示敌人血量，%d由enemyHealth的整数值替换
 		DrawText("A/D Walk | Shift Run | Space Jump | C Dash | F1 Debug", 20, 52, 18, BLACK);
-		if (showCollision) DrawText(TextFormat("Motion: %s | Frame: %d / 6 | Ground: %d | FPS: %d", motionNames[motion], frame + 1, isGrounded, GetFPS()), 20, 78, 18, BLACK);
+		if (showCollision) DrawText(TextFormat("Motion: %s | Frame: %d / 6 | Ground: %d | FPS: %d", playerVisual.GetMotionName(), playerVisual.GetFrame() + 1, isGrounded, GetFPS()), 20, 78, 18, BLACK);
 		// %d 留出一个整数位置，用 playerHealth 当前的值填进去
 		EndDrawing();
 	}
-	UnloadTexture(runTexture); // 释放单独的跑步图集
-	UnloadTexture(knightTexture); // 窗口关闭前释放显存资源
+	playerVisual.Unload(); // 窗口仍存在时，释放外观类拥有的纹理
 	UnloadTexture(forestTexture);
 	UnloadTexture(terrainTexture);
 	CloseWindow();
