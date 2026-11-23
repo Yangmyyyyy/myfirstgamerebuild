@@ -10,7 +10,11 @@ void Player::Update(float deltaTime, const PlayerInput& input, const World& worl
     float playercurSpeed = GameConfig::WalkSpeed;
     frameStartX = player.x; // 用实际位移区分行走和推墙，不只看有没有按键
     // 方向每帧从零开始。左右两个独立 if 可以同时成立，屏幕 x 向右增大，y 向下增大。
-        if (playerHealth <= 0 && input.restartPressed) Reset();
+    if (playerHealth <= 0 && input.restartPressed)
+    {
+        Reset(); // 恢复玩家的位置、血量等状态
+        combat.Cancel(); // 同时清除上一局剩余的攻击
+    }
     if (isGrounded)
     {
         coyoteTimeLeft = GameConfig::CoyoteTime; // 站在地面上，持续准备好 0.1 秒宽限
@@ -29,7 +33,23 @@ void Player::Update(float deltaTime, const PlayerInput& input, const World& worl
         playercurSpeed = GameConfig::RunSpeed;
     else
         playercurSpeed = GameConfig::WalkSpeed;
-    if (playerHealth > 0)
+    if (dashTimeLeft > 0)
+    {
+        dashTimeLeft -= deltaTime;
+    }
+    if (dashCooldown > 0)
+    {
+        dashCooldown -= deltaTime;
+    }
+    if (dashInvincibleTime > 0)
+    {
+        dashInvincibleTime -= deltaTime;
+    }
+    if (dashInvincibleTime <= 0)
+        dashInvincibleTime = 0.0f; // 避免负数，方便后续判断
+    combat.TryStart(input.attackPressed, playerHealth > 0, dashTimeLeft, facingDirection);
+    if (playerHealth > 0 && !combat.IsAttacking())
+        // 玩家活着，并且没有正在攻击，才处理下面的移动、转向和跳跃输入
     {
         if (input.jumpPressed &&
             (isGrounded || coyoteTimeLeft > 0 || airJumpsLeft > 0))
@@ -44,47 +64,27 @@ void Player::Update(float deltaTime, const PlayerInput& input, const World& worl
             coyoteTimeLeft = 0.0f; // 本次起跳用完地面机会，避免再次免费跳
         }
         if (input.jumpReleased && velocityY < 0)
-        {
             velocityY *= 0.5f; // 上升中松开空格，把剩余向上速度减半
-        }
         if (input.left)
             directionX -= 1.0f;
         if (input.right)
             directionX += 1.0f;
         if (directionX != 0)
-        {
             facingDirection = directionX; // 有左右输入才更新，松手后保留最后朝向
-        }
     }
-    if (dashTimeLeft > 0)
-    {
-        dashTimeLeft -= deltaTime;
-    }
-    if (dashCooldown > 0)
-    {
-        dashCooldown -= deltaTime;
-    }
-    if (dashInvincibleTime > 0)
-    {
-        dashInvincibleTime -= deltaTime;
-    }
-    if  (dashInvincibleTime <= 0)
-        dashInvincibleTime = 0.0f; // 避免负数，方便后续判断
-        combat.TryStart(input.attackPressed, playerHealth > 0, dashTimeLeft, facingDirection);
     if (input.dashPressed && dashCooldown <= 0 && playerHealth > 0)
     {
         dashTimeLeft = GameConfig::DashDuration; // 设置冲刺持续时间
         dashCooldown = GameConfig::DashCooldown; // 设置冲刺冷却时间
         dashInvincibleTime = GameConfig::DashInvincibleTime; // 设置冲刺无敌时间
         dashDirection = facingDirection; // 发动时复制当前面向，锁定本次冲刺方向
+        combat.Cancel(); // 冲刺成功发动，调用这个对象的取消攻击功能
     }
     // 每轴先尝试移动，再将矩形贴到挡路平台的表面。
     float moveX = directionX * playercurSpeed * deltaTime; // 默认使用普通横移
 
     if (dashTimeLeft > 0 && playerHealth > 0)
-    {
         moveX = dashDirection * GameConfig::DashSpeed * deltaTime; // 冲刺时改用锁定方向的位移
-    }
 
     bool hitWallOnX = Collision::MoveX(player, moveX, platforms.data(), static_cast<int>(platforms.size()));
     if (hitWallOnX && moveX != 0) dashTimeLeft = 0.0f; // 碰撞工具报告结果，玩法决定停止冲刺
@@ -118,6 +118,7 @@ void Player::Update(float deltaTime, const PlayerInput& input, const World& worl
     bool isDead = (playerHealth <= 0);
     if (isDead)
     {
+        combat.Cancel(); // 玩家死亡，立即结束攻击
         dashTimeLeft = 0.0f; // 这一帧扣血后若已死亡，结束剩余冲刺
         dashInvincibleTime = 0.0f; // 同时结束冲刺无敌
     }

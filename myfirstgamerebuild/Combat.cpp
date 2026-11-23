@@ -16,7 +16,10 @@ void Combat::TryStart(bool pressed, bool playerAlive, float dashTimeLeft, float 
         attackDirection = facingDirection; // 发动瞬间锁方向
     }
 }
-
+void Combat::Cancel() // 实现属于Combat类的Cancel函数
+{
+    attackTimeLeft = 0.0f; // 清零剩余时间，让攻击立即结束
+}
 bool Combat::IsAttacking() const { return attackTimeLeft > 0; }
 float Combat::GetTimeLeft() const { return attackTimeLeft; }
 

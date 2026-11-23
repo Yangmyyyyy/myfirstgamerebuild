@@ -9,6 +9,7 @@ class Combat
 public:
     void UpdateTimers(float deltaTime);
     void TryStart(bool pressed, bool playerAlive, float dashTimeLeft, float facingDirection);
+    void Cancel(); // 声明一个取消攻击的功能，不返回结果
     bool IsAttacking() const;
     float GetTimeLeft() const;
     Rectangle GetAttackBox(const Rectangle& player) const;
