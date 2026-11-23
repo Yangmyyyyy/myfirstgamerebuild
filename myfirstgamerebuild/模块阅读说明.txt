@@ -33,13 +33,13 @@ EndMode2D后画HUD，最后EndDrawing。
 想加/移动平台：World.h的platforms数组；数组数量也要相应更新。
 想研究碰墙、落地：Collision.cpp负责位置修正，Player.cpp负责速度清零和恢复空跳。
 想改变攻击范围：Combat.cpp的GetAttackBox；范围宽度在GameConfig.h。
-想让攻击扣血：后续在Combat中实现，不要在Draw函数里扣血。
+想修改攻击扣血：看Combat.cpp中的ResolvePlayerAttack，不要在Draw函数里扣血。
 想改跑步播放速度：PlayerVisual.cpp的Update。
 想改镜头：CameraController.cpp。
 想改血量文字显示位置：Hud.cpp。
 
 四、这次没有顺带添加的玩法
-J仍是0.2秒攻击框预览，无前摇/后摇、挥剑素材或敌人扣血。
+J已有0.2秒攻击框与每剑20点伤害，同一剑只伤一次；尚无前摇/后摇和挥剑素材。
 攻击锁移动/转向/起跳、Dash取消普攻以及死亡/R清理已由用户亲自完成，检查通过。
 敌人仍有旧身体接触伤害，等敌人攻击规则完成后再移除。
 敌人AI、蓝光弹反、破防处决和慢动作尚未实现。

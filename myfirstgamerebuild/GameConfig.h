@@ -21,6 +21,7 @@ namespace GameConfig
     constexpr float DashInvincibleTime = 0.4f;
     constexpr float AttackDuration = 0.2f;
     constexpr float AttackReach = 60.0f;
+    constexpr int PlayerAttackDamage = 20; // 玩家每次普通攻击造成20点伤害
     constexpr int ContactDamage = 10;
     constexpr float DamageCooldown = 1.0f;
 }

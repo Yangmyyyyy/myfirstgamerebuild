@@ -15,7 +15,10 @@ public:
     Rectangle GetAttackBox(const Rectangle& player) const;
     void DrawAttackBox(const Player& player) const;
     void ResolveContactDamage(Player& player, const Enemy& enemy) const;
+    void ResolvePlayerAttack(const Player& player, Enemy& enemy);
+    // 读取玩家状态，检查攻击是否命中，并修改敌人血量
 private:
     float attackTimeLeft = 0.0f;
     float attackDirection = 1.0f;
+    bool hasHitEnemy = false;
 };

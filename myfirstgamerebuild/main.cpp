@@ -36,6 +36,8 @@ int main()
         PlayerInput input = ReadPlayerInput(); // 先读这一帧的输入
         combat.UpdateTimers(deltaTime); // 更新已有攻击倒计时，再允许启动下一次攻击
         player.Update(deltaTime, input, world, combat, enemy); // 输入、物理、接触伤害
+        combat.ResolvePlayerAttack(player, enemy);
+        // 玩家移动和状态处理完成后，再结算攻击命中
         camera.Update(player.GetBounds(), world.GetWidth()); // 使用玩家处理后的最新位置
         playerVisual.Update(deltaTime, player.GetVisualState(input.running)); // 最后选择外观
 
