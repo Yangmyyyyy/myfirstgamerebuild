@@ -1,5 +1,6 @@
 ﻿//raylib 专门用来开发游戏和图形程序的库
 #include "raylib.h"
+#include <filesystem> // 查找资源目录，让 Visual Studio 和双击 exe 都能加载图片
 
 
 // 重做 Day03（2026-11-16）：圆心坐标、WASD、四边限制、按秒移动与方向归一化。
@@ -66,6 +67,44 @@ int main()
 	const float playerWidth = 40.0f;  // 碰撞体宽度，像素
 	const float playerHeight = 40.0f; // 碰撞体高度，像素
 	InitWindow(screenWidth,screenHeight,"My First Game");
+	// 先定位资源，再加载；窗口创建后才有上传纹理需要的图形环境。
+	namespace fs = std::filesystem;
+	fs::path resourceDir = "resources";
+	if (!fs::exists(resourceDir / "knight_actions.png"))
+	{
+		resourceDir = fs::path(GetApplicationDirectory()) / "resources";
+	}
+	Texture2D forestTexture = LoadTexture((resourceDir / "forest.png").string().c_str());
+	Image knightImage = LoadImage((resourceDir / "knight_actions.png").string().c_str());
+	Texture2D knightTexture = LoadTextureFromImage(knightImage);
+	Rectangle animationFrames[3][4] = {}; // 三种动作，每种四帧；此处保存图片中的截取范围
+	float spriteScale = 1.0f;
+	if (knightImage.data != nullptr)
+	{
+		float maxRunHeight = 1.0f;
+		for (int row = 0; row < 3; row++)
+		{
+			for (int frame = 0; frame < 4; frame++)
+			{
+				int left = frame * knightImage.width / 4;
+				int top = row * knightImage.height / 3;
+				Rectangle cell = { static_cast<float>(left), static_cast<float>(top),
+					static_cast<float>((frame + 1) * knightImage.width / 4 - left),
+					static_cast<float>((row + 1) * knightImage.height / 3 - top) };
+				Image part = ImageFromImage(knightImage, cell);
+				Rectangle bounds = GetImageAlphaBorder(part, 0.1f); // 排除透明留白，脚底才容易对齐
+				animationFrames[row][frame] = { left + bounds.x, top + bounds.y, bounds.width, bounds.height };
+				if (row == 0 && bounds.height > maxRunHeight) maxRunHeight = bounds.height;
+				UnloadImage(part);
+			}
+		}
+		spriteScale = 76.0f / maxRunHeight; // 美术身高约76像素；40×40碰撞体仍独立保留
+	}
+	UnloadImage(knightImage); // 图片已上传为纹理，释放 CPU 侧图片内存
+	SetTextureFilter(knightTexture, TEXTURE_FILTER_POINT); // 像素图使用最近邻采样
+	float animationTime = 0.0f; // 跨帧保存动画播放进度
+	int previousAnimation = -1;
+	bool showCollision = false; // F1 可显示原有碰撞矩形，便于检查外观与判定的区别
 	// Rectangle 的 x/y 是左上角。减去一半宽高，让矩形中心仍在窗口中央。
 	Rectangle player = { (screenWidth - playerWidth) / 2.0f, (screenHeight - playerHeight) / 2.0f, playerWidth, playerHeight };
 	Camera2D camera = {}; // 各项先初始化为零
@@ -280,6 +319,9 @@ int main()
 		}
 		BeginDrawing();
 		ClearBackground(SKYBLUE);
+		// 背景是远景，先在窗口坐标下绘制，裁掉原照片四周灰框；平台仍在镜头内。
+		if (forestTexture.id != 0)
+			DrawTexturePro(forestTexture, { 24, 80, 1233, 693 }, { 0, 0, 1000, 600 }, { 0, 0 }, 0, WHITE);
 		BeginMode2D(camera); // 开始用镜头显示地图里的物体
 		// 你现有的平台、敌人、玩家和眼睛绘制代码放在这里
 		for (int i = 0; i < 3; i++)
@@ -290,24 +332,36 @@ int main()
 		// 把剩余无敌时间分成每档 0.08 秒，转换为整数档位
 		int flashStep = static_cast<int>(dashInvincibleTime / 0.08f);
 		int flashStep2 = static_cast<int>(damageCooldown / 0.08f);
-		if (dashInvincibleTime > 0 && flashStep % 2 == 0 || damageCooldown > 0 && flashStep2 % 2 == 0)
+		Color tint = ((dashInvincibleTime > 0 && flashStep % 2 == 0) ||
+			(damageCooldown > 0 && flashStep2 % 2 == 0)) ? YELLOW : WHITE;
+		// 物理更新完成后选择外观；这里只读移动状态，不改变碰撞或速度。
+		int animation = dashTimeLeft > 0 ? 2 : (IsKeyDown(KEY_LEFT_SHIFT) ? 1 : 0);
+		if (animation != previousAnimation) { animationTime = 0.0f; previousAnimation = animation; }
+		bool animate = !isDead && (dashTimeLeft > 0 || (isGrounded && directionX != 0));
+		if (animate) animationTime += deltaTime;
+		else animationTime = 0.0f; // 暂用跑步首帧占位静止/空中姿势，后续再补专用动作
+		float frameSeconds = animation == 1 ? 0.075f : 0.11f;
+		int frame = static_cast<int>(animationTime / frameSeconds) % 4;
+		if (animation == 2) // 冲刺是一次动作，按持续时间推进，不在冲刺中重复循环
 		{
-			DrawRectangleRec(player, YELLOW); // 无敌期间，偶数档画黄色
+			frame = static_cast<int>((0.4f - dashTimeLeft) / 0.1f);
+			if (frame < 0) frame = 0;
+			if (frame > 3) frame = 3;
 		}
-		else
+		if (knightTexture.id != 0)
 		{
-			DrawRectangleRec(player, WHITE); // 奇数档或无敌结束后画白色
+			Rectangle source = animationFrames[animation][frame];
+			float width = source.width * spriteScale;
+			float height = source.height * spriteScale;
+			float look = animation == 2 ? dashDirection : facingDirection;
+			if (look < 0) source.width = -source.width; // 负截取宽度实现水平翻转，不需重复保存左向图片
+			DrawTexturePro(knightTexture, source,
+				{ player.x + player.width / 2 - width / 2, player.y + player.height - height, width, height },
+				{ 0, 0 }, 0, tint); // 图片脚底对齐碰撞体脚底
 		}
-		if (facingDirection > 0)
-		{
-			// 朝右：眼睛放在身体右侧，距离右边缘 8 像素
-			DrawCircleV({ player.x + player.width - 8.0f, player.y + 12.0f }, 3.0f, BLACK);
-		}
-		else
-		{
-			// 朝左：眼睛放在身体左侧，距离左边缘 8 像素
-			DrawCircleV({ player.x + 8.0f, player.y + 12.0f }, 3.0f, BLACK);
-		}
+		else DrawRectangleRec(player, tint); // 素材丢失时保留矩形，游戏仍可检查
+		if (IsKeyPressed(KEY_F1)) showCollision = !showCollision;
+		if (showCollision) DrawRectangleLinesEx(player, 1.0f, LIME);
 		EndMode2D(); // 后面的文字恢复使用窗口坐标
 		if (isDead == true)
 		{
@@ -315,9 +369,12 @@ int main()
 			DrawText("PRESS [R] TO RESTART", screenWidth / 2 - 300, screenHeight / 2, 50, RED);
 		}
 		DrawText(TextFormat("Health: %d", playerHealth), 20, 20, 24, BLACK);
+		DrawText("A/D Move | Shift Run | Space Jump | C Dash | F1 Hitbox", 20, 52, 18, BLACK);
 		// %d 留出一个整数位置，用 playerHealth 当前的值填进去
 		EndDrawing();
 	}
+	UnloadTexture(knightTexture); // 窗口关闭前释放显存资源
+	UnloadTexture(forestTexture);
 	CloseWindow();
 	return 0;
 }

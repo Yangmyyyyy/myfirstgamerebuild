@@ -154,4 +154,10 @@
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\raylib.6.2.0\build\native\raylib.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\raylib.6.2.0\build\native\raylib.targets'))" />
   </Target>
+  <Target Name="CopyGameResources" AfterTargets="Build">
+    <ItemGroup>
+      <GameResources Include="$(ProjectDir)resources\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(GameResources)" DestinationFiles="@(GameResources->'$(OutDir)resources\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 </Project>
