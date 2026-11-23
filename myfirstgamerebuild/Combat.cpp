@@ -44,9 +44,12 @@ void Combat::DrawAttackBox(const Player& player) const
 void Combat::ResolveContactDamage(Player& player, const Enemy& enemy) const
 {
     // 保留原版本接触扣血；敌人真正攻击做好后再移除这个入口。
-    if (CheckCollisionRecs(player.GetBounds(), enemy.GetBounds()))
+    if (enemy.GetHealth() > 0 &&
+        CheckCollisionRecs(player.GetBounds(), enemy.GetBounds()))
+    {
         player.TakeDamage(GameConfig::ContactDamage);
-
+        // 敌人活着，并且身体接触玩家时，才保留当前接触伤害
+    }
 }
 void Combat::ResolvePlayerAttack(const Player& player, Enemy& enemy)
 {
@@ -67,3 +70,9 @@ void Combat::ResolvePlayerAttack(const Player& player, Enemy& enemy)
         hasHitEnemy = true; // 记住这一剑已经命中，后续帧不再扣血
     }
 }
+
+// Day08 日末复盘：每次新攻击重置hasHitEnemy，真正命中后设true，不能每帧清零。
+// return;只结束当前void函数，不退出整个游戏；未攻击/已命中/死亡/冲刺时提前返回。
+// Cancel清攻击计时；只有成功发动Dash才调用，冷却中按C不会取消；死亡和R也显式清理。
+// 不画敌人不等于删除数据，所以接触伤害还要检查敌人HP>0；存活敌人的旧接触伤害暂时保留。
+// 待学：前摇抬剑不伤、生效窗口能伤一次、后摇收招不伤；连击/弹反/AI只是设计，尚未实现。

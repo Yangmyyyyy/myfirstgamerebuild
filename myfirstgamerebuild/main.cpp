@@ -61,3 +61,11 @@ int main()
     CloseWindow();
     return 0;
 }
+
+// Day08 日末复盘（2026-11-23）：素材接入与模块拆分由助手代做，攻击逻辑由你亲自完成。
+// 先读输入，再更新攻击时间和玩家物理，最后ResolvePlayerAttack结算；绘制不负责扣血。
+// class是类型，player/combat是具体对象；对象.函数()调用功能，类名::函数()是.cpp中的实现。
+// .h声明接口，.cpp写实现；public供外部调用，private保存模块自己管理的数据。
+// main里的GetVisualState提供快照，Draw(player.GetBounds())把选好的图片连接到玩家位置。
+// 明天复习：先看本文件流程，再看Combat的TryStart/Cancel/ResolvePlayerAttack，不必一次读完所有类。
+// 前摇/生效/后摇今天只介绍了概念，当前仍是0.2秒攻击；练习题未回答，不记为已掌握。

@@ -2,7 +2,7 @@
 #include "raylib.h"
 #include "GameConfig.h"
 
-// 当前敌人仍是静态蓝色方块，暂不添加AI、敌人攻击或新的死亡规则。
+// 当前敌人是静态蓝块：有血量、受伤与零血隐藏，AI和主动攻击尚未实现。
 class Enemy
 {
 public:
