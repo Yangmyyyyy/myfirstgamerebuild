@@ -1,0 +1,148 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>布衣大剑角色 · 动作预览</title>
+<style>*{box-sizing:border-box}body{margin:0;padding:20px;background:#172127;color:#e5eddf;font:16px system-ui,"Microsoft YaHei"}main{max-width:1100px;margin:auto}h1{font-size:25px}p{line-height:1.7;color:#b9c8bd}.controls{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}button,select{padding:9px 13px;background:#30433d;color:#edf5e8;border:1px solid #61796b;border-radius:7px;font:inherit}section{min-width:0}.cards{display:grid;grid-template-columns:1fr 1fr;gap:20px}canvas{width:100%;display:block;background:#233332;border:1px solid #57705b;border-radius:8px;image-rendering:pixelated}.status{margin:8px 0;color:#d3c398}h2{font-size:20px}@media(max-width:700px){.cards{grid-template-columns:1fr}}</style>
+<main><h1>布衣大剑角色 · 动作对照稿</h1><p>待机、跳跃和冲刺各 8 帧，行走和跑步各 12 帧。</p>
+<div class="controls"><button id="play">暂停</button><button id="prev">上一帧</button><button id="next">下一帧</button><label>速度 <select id="speed"><option value="0.5">0.5倍</option><option value="1" selected>1倍</option><option value="1.3">1.3倍</option></select></label><button id="flip">朝向：右</button></div>
+<div class="cards"><section><h2>待机 · 8帧</h2><canvas width="540" height="430"></canvas><div class="status"></div></section><section><h2>行走 · 12帧</h2><canvas width="540" height="430"></canvas><div class="status"></div></section><section><h2>跑步 · 12帧</h2><canvas width="540" height="430"></canvas><div class="status"></div></section><section><h2>跳跃 · 8帧</h2><canvas width="540" height="430"></canvas><div class="status"></div></section><section><h2>冲刺 · 8帧</h2><canvas width="540" height="430"></canvas><div class="status"></div></section></div>
+<section><h2>三连击 · 24 帧</h2><canvas width="840" height="430"></canvas><div class="status" id="combo-status"></div></section>
+<p>位移、刀光和时长供预览使用。</p></main><script>
+const clips=[{"file": "hero_idle_8.png", "title": "待机", "duration": 215, "frames": [{"x": 154, "y": 88, "w": 213, "h": 344, "anchorX": 240.0, "anchorY": 432}, {"x": 634, "y": 89, "w": 218, "h": 343, "anchorX": 720.0, "anchorY": 432}, {"x": 1115, "y": 85, "w": 222, "h": 347, "anchorX": 1200.0, "anchorY": 432}, {"x": 1594, "y": 77, "w": 223, "h": 355, "anchorX": 1680.0, "anchorY": 432}, {"x": 154, "y": 528, "w": 222, "h": 352, "anchorX": 240.0, "anchorY": 880}, {"x": 635, "y": 537, "w": 216, "h": 343, "anchorX": 720.0, "anchorY": 880}, {"x": 1114, "y": 539, "w": 212, "h": 341, "anchorX": 1200.0, "anchorY": 880}, {"x": 1594, "y": 538, "w": 213, "h": 342, "anchorX": 1680.0, "anchorY": 880}], "scale": 0.81}, {"file": "hero_walk_12.png", "title": "行走", "duration": 85, "frames": [{"x": 70, "y": 12, "w": 241, "h": 331, "anchorX": 181.1722286152666, "anchorY": 343}, {"x": 451, "y": 19, "w": 222, "h": 324, "anchorX": 542.9153742414026, "anchorY": 343}, {"x": 827, "y": 19, "w": 208, "h": 324, "anchorX": 905.2385786802031, "anchorY": 343}, {"x": 1194, "y": 19, "w": 204, "h": 324, "anchorX": 1266.8383973288815, "anchorY": 343}, {"x": 80, "y": 381, "w": 231, "h": 324, "anchorX": 181.1919398907104, "anchorY": 705}, {"x": 440, "y": 382, "w": 233, "h": 323, "anchorX": 543.4445180523352, "anchorY": 705}, {"x": 790, "y": 381, "w": 245, "h": 324, "anchorX": 906.2383643617021, "anchorY": 705}, {"x": 1174, "y": 377, "w": 224, "h": 328, "anchorX": 1268.3769434963974, "anchorY": 705}, {"x": 108, "y": 740, "w": 203, "h": 327, "anchorX": 182.11023916292976, "anchorY": 1067}, {"x": 469, "y": 744, "w": 204, "h": 323, "anchorX": 543.646173969915, "anchorY": 1067}, {"x": 802, "y": 744, "w": 233, "h": 323, "anchorX": 905.5497835497836, "anchorY": 1067}, {"x": 1166, "y": 744, "w": 232, "h": 323, "anchorX": 1267.7956448911223, "anchorY": 1067}]}, {"file": "hero_run_12.png", "title": "跑步", "duration": 58, "frames": [{"x": 34, "y": 26, "w": 251, "h": 318, "anchorX": 201.177916233991, "anchorY": 344}, {"x": 407, "y": 36, "w": 252, "h": 308, "anchorX": 577.8495092693565, "anchorY": 344}, {"x": 792, "y": 33, "w": 226, "h": 311, "anchorX": 944.0349110439745, "anchorY": 344}, {"x": 1168, "y": 26, "w": 211, "h": 301, "anchorX": 1316.3753462603877, "anchorY": 344}, {"x": 67, "y": 390, "w": 227, "h": 289, "anchorX": 221.37366892545984, "anchorY": 707}, {"x": 425, "y": 390, "w": 223, "h": 317, "anchorX": 585.4085872576177, "anchorY": 707}, {"x": 764, "y": 396, "w": 253, "h": 311, "anchorX": 947.5016711229946, "anchorY": 707}, {"x": 1181, "y": 402, "w": 196, "h": 305, "anchorX": 1316.1342412451363, "anchorY": 707}, {"x": 47, "y": 761, "w": 240, "h": 309, "anchorX": 214.58555783709787, "anchorY": 1070}, {"x": 417, "y": 755, "w": 239, "h": 315, "anchorX": 581.5807127882599, "anchorY": 1070}, {"x": 793, "y": 756, "w": 223, "h": 288, "anchorX": 943.2939588255147, "anchorY": 1070}, {"x": 1142, "y": 757, "w": 246, "h": 313, "anchorX": 1310.1193977591035, "anchorY": 1070}]}, {"file": "hero_jump_8.png", "title": "跳跃", "duration": 76, "frames": [{"x": 114, "y": 109, "w": 229, "h": 316, "anchorX": 221.5, "anchorY": 425}, {"x": 541, "y": 64, "w": 252, "h": 361, "anchorX": 665.0, "anchorY": 425}, {"x": 988, "y": 29, "w": 241, "h": 368, "anchorX": 1108.5, "anchorY": 397}, {"x": 1444, "y": 13, "w": 225, "h": 329, "anchorX": 1552.0, "anchorY": 342}, {"x": 114, "y": 467, "w": 232, "h": 356, "anchorX": 221.5, "anchorY": 823}, {"x": 550, "y": 492, "w": 237, "h": 377, "anchorX": 665.0, "anchorY": 869}, {"x": 995, "y": 538, "w": 224, "h": 332, "anchorX": 1108.5, "anchorY": 870}, {"x": 1444, "y": 505, "w": 230, "h": 369, "anchorX": 1552.0, "anchorY": 874}], "scale": 0.78, "offsetY": [0, -12, -51, -87, -87, -47, 0, 0], "hold": 420}, {"file": "hero_dash_8.png", "title": "冲刺", "duration": 40, "frames": [{"x": 49, "y": 72, "w": 302, "h": 329, "anchorX": 221.5, "anchorY": 401}, {"x": 515, "y": 119, "w": 291, "h": 192, "anchorX": 665.0, "anchorY": 311}, {"x": 970, "y": 124, "w": 287, "h": 246, "anchorX": 1108.5, "anchorY": 370}, {"x": 1386, "y": 123, "w": 321, "h": 266, "anchorX": 1552.0, "anchorY": 389}, {"x": 54, "y": 554, "w": 314, "h": 303, "anchorX": 221.5, "anchorY": 857}, {"x": 531, "y": 532, "w": 274, "h": 325, "anchorX": 665.0, "anchorY": 857}, {"x": 989, "y": 510, "w": 248, "h": 346, "anchorX": 1108.5, "anchorY": 856}, {"x": 1424, "y": 492, "w": 270, "h": 371, "anchorX": 1552.0, "anchorY": 863}], "scale": 0.78, "offsetX": [-100, -85, -36, 27, 67, 92, 100, 100], "offsetY": [0, 0, -7, -5, -2, 0, 0, 0], "hold": 420}, {"file": "hero_combo_slash_final_8.png", "title": "横斩", "duration": 0, "frames": [{"x": 104, "y": 111, "w": 212, "h": 321, "anchorX": 240.0, "anchorY": 432}, {"x": 581, "y": 116, "w": 204, "h": 316, "anchorX": 720.0, "anchorY": 432}, {"x": 1030, "y": 114, "w": 394, "h": 318, "anchorX": 1200.0, "anchorY": 432}, {"x": 1519, "y": 117, "w": 363, "h": 315, "anchorX": 1680.0, "anchorY": 432}, {"x": 81, "y": 560, "w": 246, "h": 320, "anchorX": 240.0, "anchorY": 880}, {"x": 565, "y": 560, "w": 272, "h": 320, "anchorX": 720.0, "anchorY": 880}, {"x": 1028, "y": 564, "w": 267, "h": 316, "anchorX": 1200.0, "anchorY": 880}, {"x": 1517, "y": 564, "w": 258, "h": 316, "anchorX": 1680.0, "anchorY": 880}], "scale": 0.81, "timings": [120, 73, 48, 37, 68, 65, 59, 44], "offsetX": [0, 0, 4, 20, 29, 29, 29, 29]}, {"file": "hero_combo_thrust_final_8.png", "title": "突刺", "duration": 0, "frames": [{"x": 53, "y": 125, "w": 267, "h": 307, "anchorX": 240.0, "anchorY": 432}, {"x": 539, "y": 131, "w": 308, "h": 301, "anchorX": 720.0, "anchorY": 432}, {"x": 979, "y": 129, "w": 409, "h": 303, "anchorX": 1200.0, "anchorY": 432}, {"x": 1471, "y": 129, "w": 431, "h": 303, "anchorX": 1680.0, "anchorY": 432}, {"x": 30, "y": 578, "w": 432, "h": 302, "anchorX": 240.0, "anchorY": 880}, {"x": 527, "y": 575, "w": 413, "h": 305, "anchorX": 720.0, "anchorY": 880}, {"x": 1014, "y": 574, "w": 360, "h": 306, "anchorX": 1200.0, "anchorY": 880}, {"x": 1557, "y": 550, "w": 264, "h": 330, "anchorX": 1680.0, "anchorY": 880}], "scale": 0.78, "timings": [92, 54, 38, 85, 54, 52, 50, 40], "offsetX": [0, 6, 17, 37, 37, 37, 37, 37]}, {"file": "hero_combo_chop_final_8.png", "title": "下劈", "duration": 0, "frames": [{"x": 130, "y": 119, "w": 216, "h": 313, "anchorX": 240.0, "anchorY": 432}, {"x": 600, "y": 68, "w": 196, "h": 364, "anchorX": 720.0, "anchorY": 432}, {"x": 1058, "y": 15, "w": 197, "h": 417, "anchorX": 1200.0, "anchorY": 432}, {"x": 1501, "y": 99, "w": 306, "h": 333, "anchorX": 1680.0, "anchorY": 432}, {"x": 94, "y": 622, "w": 329, "h": 258, "anchorX": 240.0, "anchorY": 880}, {"x": 555, "y": 640, "w": 319, "h": 240, "anchorX": 720.0, "anchorY": 880}, {"x": 1026, "y": 633, "w": 310, "h": 247, "anchorX": 1200.0, "anchorY": 880}, {"x": 1516, "y": 613, "w": 296, "h": 267, "anchorX": 1680.0, "anchorY": 880}], "scale": 0.78, "timings": [135, 56, 48, 42, 42, 92, 92, 115], "offsetX": [0, 0, 0, 0, 5, 18, 18, 18]}],canvases=[...document.querySelectorAll('canvas')],labels=[...document.querySelectorAll('.status')];
+const moveClips = clips.filter(clip => !clip.timings);
+let chainOffset = 0;
+let chainDuration = 0;
+const combo = clips.slice(moveClips.length).flatMap((clip, attack) => clip.frames.map((pose, frame) => {
+  const beat = {clip, attack, pose, frame, x: chainOffset + clip.offsetX[frame] - 105, start: chainDuration};
+  chainDuration += clip.timings[frame];
+  if (frame === clip.frames.length - 1) chainOffset += clip.offsetX[frame];
+  return beat;
+}));
+let manualCombo = null;
+const images=clips.map(c=>{let i=new Image();i.src=c.file;return i});let playing=true,flip=false,time=0,last=0,speed=1,manual=null;
+function drawPose(g, image, f, scale, walkFrame) {
+  const x = (f.x - f.anchorX) * scale;
+  const y = (f.y - f.anchorY) * scale;
+  if (walkFrame === null) {
+    g.drawImage(image, f.x, f.y, f.w, f.h, x, y, f.w * scale, f.h * scale);
+    return;
+  }
+
+  // 一轮有两步。身体每步起伏一次，肩膀随左右腿交替略微前后摆。
+  const phase = walkFrame * Math.PI / 6;
+  const sway = 5 * Math.sin(phase);
+  const lift = 6 * Math.sin(phase) ** 2;
+  const weight = row => {
+    // 从腰部向上渐渐增加幅度，让腿和脚沿用原来的落点。
+    const blend = Math.max(0, Math.min(1, (f.anchorY - f.y - row - 152) / 88));
+    return blend * blend * (3 - 2 * blend);
+  };
+  const targetY = row => Math.round(y + row * scale - lift * weight(row));
+
+  // 相邻条带共用边界，避免变形时出现水平缝隙。
+  for (let row = 0; row < f.h; row += 4) {
+    const end = Math.min(row + 4, f.h);
+    const top = targetY(row);
+    g.drawImage(image, f.x, f.y + row, f.w, end - row,
+      x + Math.round(sway * weight((row + end) / 2)), top, f.w * scale, targetY(end) - top);
+  }
+}
+function drawBladeLight(g, attack, frame) {
+  // 刀光与刀尖共用角色坐标，翻转朝向时会一起翻转。
+  const paths = [
+    [
+      [-110, -208, 28, -124, 187, -155, 31, -155],
+      [-17, -166, 76, -112, 176, -130, 94, -131],
+    ],
+    [
+      [73, -132, 151, -139, 191, -132, 151, -126],
+      [93, -141, 179, -152, 212, -141, 165, -131],
+      [111, -142, 173, -151, 210, -142, 175, -136],
+    ],
+    [
+      [-10, -324, 102, -322, 164, -263, 105, -298],
+      [131, -282, 230, -177, 168, -53, 192, -168],
+      [179, -174, 207, -77, 154, -10, 188, -86],
+    ],
+  ];
+  const lightIndex = frame - (attack === 2 ? 3 : 2);
+  const points = paths[attack][lightIndex];
+  if (!points) return;
+  const [startX, startY, outerX, outerY, tipX, tipY, innerX, innerY] = points;
+  g.globalAlpha = attack === 0 ? [.96, .46][lightIndex] : [.62, .96, .32][lightIndex];
+  g.beginPath();
+  g.moveTo(startX, startY);
+  g.quadraticCurveTo(outerX, outerY, tipX, tipY);
+  g.quadraticCurveTo(innerX, innerY, startX, startY);
+  g.fillStyle = '#7bdceb';
+  g.fill();
+  g.strokeStyle = '#edffff';
+  g.lineWidth = lightIndex === (attack === 0 ? 0 : 1) ? 3 : 1.5;
+  g.beginPath();
+  g.moveTo(startX, startY);
+  g.quadraticCurveTo(outerX, outerY, tipX, tipY);
+  g.stroke();
+}
+function comboFrame() {
+  const cycle = time % (chainDuration + 550);
+  const next = combo.findIndex(beat => beat.start > cycle);
+  return next === -1 ? combo.length - 1 : next - 1;
+}
+function renderCombo() {
+  const canvas = canvases[moveClips.length];
+  const g = canvas.getContext('2d');
+  const index = manualCombo ?? comboFrame();
+  const beat = combo[index];
+  const image = images[moveClips.length + beat.attack];
+  const floor = 390;
+  g.clearRect(0, 0, canvas.width, canvas.height);
+  g.imageSmoothingEnabled = false;
+  g.fillStyle = '#83a254';
+  g.fillRect(0, floor, canvas.width, 4);
+  g.fillStyle = '#493d33';
+  g.fillRect(0, floor + 4, canvas.width, 36);
+  g.save();
+  g.translate(canvas.width / 2, floor);
+  if (flip) g.scale(-1, 1);
+  g.translate(beat.x, 0);
+  if (image.complete && image.naturalWidth) {
+    drawPose(g, image, beat.pose, beat.clip.scale, null);
+    drawBladeLight(g, beat.attack, beat.frame);
+  }
+  g.restore();
+  labels[moveClips.length].textContent = '第 ' + (beat.attack + 1) + ' 段 · ' + beat.clip.title
+    + ' · 第 ' + (beat.frame + 1) + ' / 8 帧';
+}
+function render() {
+  moveClips.forEach((clip, index) => {
+    const count = clip.frames.length;
+    const cycleTime = time % (count * clip.duration + (clip.hold ?? 0));
+    const progress = manual === null ? Math.min(cycleTime / clip.duration, count - 1) : manual[index];
+    const frame = Math.floor(progress);
+    const next = Math.min(frame + 1, count - 1);
+    const offset = values => values ? values[frame] + (values[next] - values[frame]) * (progress - frame) : 0;
+    const canvas = canvases[index];
+    const g = canvas.getContext('2d');
+    const floor = 390;
+    g.clearRect(0, 0, canvas.width, canvas.height);
+    g.imageSmoothingEnabled = false;
+    g.fillStyle = '#83a254';
+    g.fillRect(0, floor, canvas.width, 4);
+    g.fillStyle = '#493d33';
+    g.fillRect(0, floor + 4, canvas.width, 36);
+    g.save();
+    g.translate(canvas.width * .44, floor);
+    if (flip) g.scale(-1, 1);
+    g.translate(offset(clip.offsetX), offset(clip.offsetY));
+    if (images[index].complete && images[index].naturalWidth) {
+      drawPose(g, images[index], clip.frames[frame], clip.scale ?? .94, clip.title === '行走' ? frame : null);
+    }
+    g.restore();
+    labels[index].textContent = '第 ' + (frame + 1) + ' / ' + count + ' 帧';
+  });
+  renderCombo();
+}
+document.getElementById('play').onclick=()=>{playing=!playing;if(playing){manual=null;manualCombo=null;}document.getElementById('play').textContent=playing?'暂停':'继续播放'};
+document.getElementById('speed').onchange=e=>speed=Number(e.target.value);document.getElementById('flip').onclick=e=>{flip=!flip;e.target.textContent='朝向：'+(flip?'左':'右');render()};
+function step(d){playing=false;document.getElementById('play').textContent='继续播放';manualCombo=((manualCombo??comboFrame())+d+combo.length)%combo.length;manual=moveClips.map((clip,index)=>{const count=clip.frames.length;const cycle=time%(count*clip.duration+(clip.hold??0));const current=manual?.[index]??Math.min(Math.floor(cycle/clip.duration),count-1);return (current+d+count)%count});render()}
+document.getElementById('prev').onclick=()=>step(-1);document.getElementById('next').onclick=()=>step(1);
+function loop(now){if(last&&playing)time+=Math.min(100,now-last)*speed;last=now;render();requestAnimationFrame(loop)}
+Promise.all(images.map(i=>i.decode())).then(()=>requestAnimationFrame(loop)).catch(()=>labels.forEach(l=>l.textContent='未找到PNG：请将预览与图集放在同一个文件夹。'));
+</script></html>

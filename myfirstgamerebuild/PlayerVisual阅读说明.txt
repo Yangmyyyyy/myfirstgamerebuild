@@ -1,10 +1,13 @@
-﻿角色外观类阅读说明（已随整体拆分更新）
+Day09 用户布衣大剑角色接入（助手代做，待逐步学习）
 
-先看模块阅读说明.txt，它给出当前全部文件与主循环顺序。
-PlayerVisual.h声明Load/Update/Draw/Unload，private保存纹理、当前动作和帧号。
-PlayerVisual.cpp实现具体功能，PlayerVisual::表示这个函数属于该类。
-main创建PlayerVisual对象，加载一次图片，每帧Update后在镜头内Draw，退出前Unload。
-现在Player保存玩法数据，通过GetVisualState把只读快照交给PlayerVisual。
-playerVisual.Draw(player.GetBounds())将选好的帧与玩家身体位置连接。
-外观类不会修改玩家位置、血量、输入或攻击。
-class/对象、public/private、const引用、enum class、前置声明、=default/=delete等还需要逐步学习。
+PlayerVisual只管理外观：Load加载5张图，Update选择动作和帧，Draw按脚底锚点显示，Unload释放。
+resources/hero保存用户完整素材包；frames.json是裁剪坐标、锚点与预览时长来源。
+HeroAnimationData.h将前5组元数据转换成C++常量表，避免为了读JSON额外引入库。
+待机8帧、行走12帧、跑步12帧、跳跃8姿势、冲刺8帧；左右共用图，通过锚点翻转。
+起跳/下落/落地按实际物理状态分别取跳跃图的部分帧，不循环一整段假跳跃。
+落地外观最多0.12秒，移动或起跳可立即切走，不限制操作。
+Dash按GameConfig中的实际持续时间播放一轮，不把素材预览位移再次叠加到玩家位置。
+图集中没有死亡动画，因此死亡仍用待机首帧占位，不宣称已接入死亡动作。
+三个hero_combo_*攻击图、原始frames.json和HTML已保存；未加载、未改变攻击判定。
+Player、Combat、Enemy、Collision和World平台矩形未改；现有巡逻/受伤/冲刺等规则保留。
+新语法std::min/std::clamp用于限制帧号，范围for逐个清理纹理；这些代做语法仍待学习。

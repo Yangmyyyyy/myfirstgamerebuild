@@ -1,148 +1,97 @@
-﻿#include "PlayerVisual.h" // 先包含声明，编译器才知道这些函数属于哪个类
+﻿#include "PlayerVisual.h"
+#include "HeroAnimationData.h"
+#include "GameConfig.h"
+#include <algorithm>
 #include <filesystem>
 
-// PlayerVisual:: 表示“这是PlayerVisual类里面声明的函数的具体实现”。
-// .h告诉别人能调用什么；.cpp负责说明这些功能具体怎样完成。
 void PlayerVisual::Load(const char* resourceDirectory)
 {
-    Unload(); // 将来重新加载时先清理已有资源
-    const std::filesystem::path resourceDir(resourceDirectory);
-    Image knightImage = LoadImage((resourceDir / "knight_motion_v2.png").string().c_str());
-    knightTexture = knightImage.data != nullptr ? LoadTextureFromImage(knightImage) : Texture2D{};
-    spriteScale = 1.0f;
-    if (knightImage.data != nullptr)
+    Unload(); // 重新加载前先释放旧纹理；窗口必须已创建
+    const std::filesystem::path folder = std::filesystem::path(resourceDirectory) / "hero";
+    for (int i = 0; i < 5; ++i)
     {
-    float maxRunHeight = 1.0f;
-    for (int row = 0; row < 4; row++)
-    {
-        for (int frame = 0; frame < 6; frame++)
-        {
-            int left = frame * knightImage.width / 6;
-            int top = row * knightImage.height / 4;
-            Rectangle cell = { static_cast<float>(left), static_cast<float>(top),
-                static_cast<float>((frame + 1) * knightImage.width / 6 - left),
-                static_cast<float>((row + 1) * knightImage.height / 4 - top) };
-            Image part = ImageFromImage(knightImage, cell);
-            Rectangle bounds = GetImageAlphaBorder(part, 0.1f); // 排除透明留白，脚底才容易对齐
-            animationFrames[row][frame] = { left + bounds.x, top + bounds.y, bounds.width, bounds.height };
-            if (row == 0 && bounds.height > maxRunHeight) maxRunHeight = bounds.height;
-            UnloadImage(part);
-        }
+        heroTextures[i] = LoadTexture((folder / HeroAnimationData::Clips[i].file).string().c_str());
+        if (heroTextures[i].id != 0) SetTextureFilter(heroTextures[i], TEXTURE_FILTER_POINT);
     }
-    spriteScale = 76.0f / maxRunHeight; // 美术身高约76像素；40×40碰撞体仍独立保留
-    }
-    UnloadImage(knightImage); // 图片已上传为纹理，释放 CPU 侧图片内存
-    if (knightTexture.id != 0) SetTextureFilter(knightTexture, TEXTURE_FILTER_POINT); // 像素图使用最近邻采样
-    // 跑步单独用修正换腿的图集，不改已经认可的待机、行走与冲刺图片。
-    Image runImage = LoadImage((resourceDir / "knight_run_v3.png").string().c_str());
-    runTexture = runImage.data != nullptr ? LoadTextureFromImage(runImage) : Texture2D{};
-    runScale = 1.0f;
-    if (runImage.data != nullptr)
-    {
-    float maxHeight = 1.0f;
-    for (int frame = 0; frame < 6; frame++)
-    {
-        int column = frame % 3; // 六帧按三列两行保存
-        int row = frame / 3;
-        int left = column * runImage.width / 3;
-        int top = row * runImage.height / 2;
-        Image part = ImageFromImage(runImage, { static_cast<float>(left), static_cast<float>(top),
-            static_cast<float>((column + 1) * runImage.width / 3 - left),
-            static_cast<float>((row + 1) * runImage.height / 2 - top) });
-        Rectangle bounds = GetImageAlphaBorder(part, 0.1f);
-        runFrames[frame] = { left + bounds.x, top + bounds.y, bounds.width, bounds.height };
-        if (bounds.height > maxHeight) maxHeight = bounds.height;
-        UnloadImage(part);
-    }
-    runScale = 72.0f / maxHeight; // 跑步身体前倾，外观略低于76像素的站姿
-    }
-    UnloadImage(runImage);
-    if (runTexture.id != 0) SetTextureFilter(runTexture, TEXTURE_FILTER_POINT);
 }
 
 void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
 {
-    // 把剩余无敌时间分成每档 0.08 秒，转换为整数档位
     int flashStep = static_cast<int>(state.dashInvincibleTime / 0.08f);
-    int flashStep2 = static_cast<int>(state.damageCooldown / 0.08f);
+    int damageStep = static_cast<int>(state.damageCooldown / 0.08f);
     tint = ((state.dashInvincibleTime > 0 && flashStep % 2 == 0) ||
-        (state.damageCooldown > 0 && flashStep2 % 2 == 0)) ? YELLOW : WHITE;
-    // 先读取物理更新后的状态，再选外观；不在这里修改碰撞或速度。
+        (state.damageCooldown > 0 && damageStep % 2 == 0)) ? YELLOW : WHITE;
+
+    // 使用物理报告的落地变化，只播放外观缓冲，不改速度/跳跃/碰撞。
+    if (!grounded && state.grounded && (motion == Motion::Rise || motion == Motion::Fall))
+        landingTimeLeft = 0.12f;
+    else
+        landingTimeLeft = std::max(0.0f, landingTimeLeft - deltaTime);
+
     motion = Motion::Idle;
     if (state.dead) motion = Motion::Dead;
     else if (state.dashTimeLeft > 0) motion = Motion::Dash;
     else if (!state.grounded) motion = state.velocityY < 0 ? Motion::Rise : Motion::Fall;
-    else if (state.moving)
-        motion = state.running ? Motion::Run : Motion::Walk;
+    else if (state.moving) motion = state.running ? Motion::Run : Motion::Walk;
+    else if (landingTimeLeft > 0) motion = Motion::Land;
 
-    // 同一动作内计时一直保留，只有切换动作才从头播放；待机也需要播放呼吸循环。
     if (motion != previousAnimation) { animationTime = 0.0f; previousAnimation = motion; }
-    if (motion != Motion::Dead) animationTime += deltaTime;
+    animationTime += deltaTime;
     animation = 0;
     if (motion == Motion::Walk) animation = 1;
-    else if (motion == Motion::Run || motion == Motion::Rise || motion == Motion::Fall) animation = 2;
-    else if (motion == Motion::Dash) animation = 3;
-    float frameSeconds = 0.11f; // 行走保持原来的节奏
-    if (motion == Motion::Idle) frameSeconds = 0.18f; // 待机保持缓慢呼吸
-    else if (motion == Motion::Run) frameSeconds = 0.10f; // 跑步从0.075调慢，六帧一轮0.60秒，不改变移动速度
-    frame = static_cast<int>(animationTime / frameSeconds) % 6;
-    if (motion == Motion::Dash)
+    else if (motion == Motion::Run) animation = 2;
+    else if (motion == Motion::Rise || motion == Motion::Fall || motion == Motion::Land) animation = 3;
+    else if (motion == Motion::Dash) animation = 4;
+
+    const auto& clip = HeroAnimationData::Clips[animation];
+    frame = static_cast<int>(animationTime / clip.seconds) % clip.count;
+    // 跳跃跟随实际物理阶段，不循环整段动画，也不再叠加预览页模拟的位移。
+    if (motion == Motion::Rise) frame = std::min(3, 1 + static_cast<int>(animationTime / clip.seconds));
+    else if (motion == Motion::Fall) frame = std::min(5, 4 + static_cast<int>(animationTime / clip.seconds));
+    else if (motion == Motion::Land) frame = landingTimeLeft > 0.06f ? 6 : 7;
+    else if (motion == Motion::Dash)
     {
-        frame = static_cast<int>((0.4f - state.dashTimeLeft) / (0.4f / 6));
-        if (frame < 0) frame = 0;
-        if (frame > 5) frame = 5;
+        float progress = (GameConfig::DashDuration - state.dashTimeLeft) / GameConfig::DashDuration;
+        frame = std::clamp(static_cast<int>(progress * clip.count), 0, clip.count - 1);
     }
-    // 空中先使用收腿的独立取帧，停止在空中跑步；专用跳跃/死亡图仍待补全。
-    if (motion == Motion::Rise) frame = 1;
-    if (motion == Motion::Fall) frame = 2;
-    if (motion == Motion::Dead) frame = 0;
+    else if (motion == Motion::Dead) frame = 0; // 包内没有死亡动作，明确保留待机占位
 
     grounded = state.grounded;
     lookDirection = motion == Motion::Dash ? state.dashDirection : state.facingDirection;
 }
 
-// const Rectangle&是只读引用：使用玩家的矩形，不复制，也不能在这里改变它。
-// 函数末尾const表示Draw不改变这个外观对象的成员。
 void PlayerVisual::Draw(const Rectangle& player) const
 {
-    if (knightTexture.id != 0)
-    {
-        Rectangle source = animationFrames[animation][frame];
-        Texture2D activeTexture = knightTexture;
-        float activeScale = spriteScale;
-        if (motion == Motion::Run && runTexture.id != 0)
-        {
-            source = runFrames[frame]; // 只有跑步换成左右腿交替的六帧
-            activeTexture = runTexture;
-            activeScale = runScale;
-        }
-        float width = source.width * activeScale;
-        float height = source.height * activeScale;
-        // 只修正外观：落地时靴底略压入草面，避免贴图边缘留白显得悬空。
-        float footOffset = grounded ? 3.0f : 0.0f;
-        if (grounded)
-            DrawEllipse(static_cast<int>(player.x + player.width / 2),
-                static_cast<int>(player.y + player.height + 2), 14, 2, Fade(BLACK, 0.20f)); // 脚边接触阴影，先画在角色下面
-        float look = lookDirection; // 朝向在Update中从玩家状态读取
-        if (look < 0) source.width = -source.width; // 负截取宽度实现水平翻转，不需重复保存左向图片
-        DrawTexturePro(activeTexture, source,
-            { player.x + player.width / 2 - width / 2, player.y + player.height - height + footOffset, width, height },
-            { 0, 0 }, 0, tint); // 图片脚底在碰撞体脚底基础上增加视觉偏移，物理不变
-    }
-    else DrawRectangleRec(player, tint); // 素材丢失时保留矩形，游戏仍可检查
+    if (heroTextures[animation].id == 0) { DrawRectangleRec(player, tint); return; }
+    const auto& clip = HeroAnimationData::Clips[animation];
+    const auto& pose = clip.frames[frame];
+    Rectangle source = pose.source;
+    float width = source.width * clip.scale;
+    float height = source.height * clip.scale;
+    float xFromAnchor = (source.x - pose.anchor.x) * clip.scale;
+    float centerX = player.x + player.width / 2;
+    float footY = player.y + player.height + (grounded ? 3.0f : 0.0f);
+    if (grounded)
+        DrawEllipse(static_cast<int>(centerX), static_cast<int>(footY), 12, 2, Fade(BLACK, 0.16f));
+    // 围绕脚底锚点翻转，剑伸得更远时也不会把身体挤到碰撞框另一侧。
+    float x = centerX + xFromAnchor;
+    if (lookDirection < 0) { source.width = -source.width; x = centerX - xFromAnchor - width; }
+    DrawTexturePro(heroTextures[animation], source,
+        { x, footY + (pose.source.y - pose.anchor.y) * clip.scale, width, height },
+        { 0, 0 }, 0, tint);
 }
 
 void PlayerVisual::Unload()
 {
-    if (runTexture.id != 0) UnloadTexture(runTexture);
-    if (knightTexture.id != 0) UnloadTexture(knightTexture);
-    runTexture = {};
-    knightTexture = {};
+    for (auto& texture : heroTextures)
+    {
+        if (texture.id != 0) UnloadTexture(texture);
+        texture = {};
+    }
     animationTime = 0.0f;
-    motion = Motion::Idle;
-    previousAnimation = Motion::Idle;
-    animation = 0;
-    frame = 0;
+    landingTimeLeft = 0.0f;
+    motion = previousAnimation = Motion::Idle;
+    animation = frame = 0;
     grounded = false;
     lookDirection = 1.0f;
     tint = WHITE;
@@ -150,18 +99,15 @@ void PlayerVisual::Unload()
 
 const char* PlayerVisual::GetMotionName() const
 {
-    const char* names[] = { "Idle", "Walk", "Run", "Dash", "Rise", "Fall", "Dead" };
+    const char* names[] = { "Idle", "Walk", "Run", "Dash", "Rise", "Fall", "Land", "Dead" };
     return names[static_cast<int>(motion)];
 }
 
-int PlayerVisual::GetFrame() const
-{
-    return frame;
-}
+int PlayerVisual::GetFrame() const { return frame; }
+int PlayerVisual::GetFrameCount() const { return HeroAnimationData::Clips[animation].count; }
 
-// Day08 日末复盘：Load只准备纹理，Draw才显示；加载在InitWindow后，释放在CloseWindow前。
-// motion只是动作选项，不会自动控制玩家；先用状态选图和帧，再以玩家坐标绘制。
-// 条件 ? 真值 : 假值是三元表达式；static_cast<int>截去小数，3.9变3、-3.9变-3。
-// Color tint先选颜色再统一画一次，WHITE保留原图；%2按奇偶档位切换黄白闪烁。
-// 跑步违和不只因帧率，旧图几乎同一腿在前；v3重做两腿交替，仍按0.10秒/帧播放。
-// 素材外观、复杂枚举与路径处理尚需复习，不等于已经能独立写出这套加载和播放代码。
+// Day09 助手代做/待学习：使用用户素材包接入5组外观，原frames.json与攻击图完整归档。
+// 仅换贴图及播放；Player/Combat/Enemy/Collision规则未改，攻击动画与刀光尚未接入。
+// 死亡暂用待机首帧；预览页的offsetX/offsetY不作为游戏位移，避免跳跃冲刺叠加。
+// 昨日课堂知识：Load准备纹理，Update选帧，Draw显示，Unload释放；const引用只读原数据。
+// 三元表达式选择真假值；static_cast<int>截小数；%循环帧号或切换黄白闪烁。

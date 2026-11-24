@@ -17,7 +17,7 @@ int main()
     SetTargetFPS(60);
     namespace fs = std::filesystem;
     fs::path resourceDir = "resources";
-    if (!fs::exists(resourceDir / "knight_motion_v2.png"))
+    if (!fs::exists(resourceDir / "hero" / "hero_idle_8.png"))
         resourceDir = fs::path(GetApplicationDirectory()) / "resources";
 
     World world;

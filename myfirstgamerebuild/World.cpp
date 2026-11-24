@@ -1,12 +1,13 @@
 ﻿#include "World.h"
 #include <filesystem>
+#include <algorithm>
 
 void World::Load(const char* resourceDirectory)
 {
     Unload();
     const std::filesystem::path resourceDir(resourceDirectory);
     forestTexture = LoadTexture((resourceDir / "forest.png").string().c_str());
-    Image terrainImage = LoadImage((resourceDir / "terrain.png").string().c_str());
+    Image terrainImage = LoadImage((resourceDir / "terrain_pixel_v1.png").string().c_str());
     terrainTexture = terrainImage.data != nullptr ? LoadTextureFromImage(terrainImage) : Texture2D{};
     if (terrainImage.data != nullptr)
     {
@@ -58,15 +59,23 @@ void World::DrawPlatforms() const
         }
         else
         {
-            // 左右端各保留一块，只有中间延展；草叶可超出碰撞体，但脚底仍站在原平台顶面。
-            float sourceCap = source.width * 0.1f;
-            float cap = 16.0f;
+            // 左右端各保留一块，中间等比例重复铺设；草叶可超出碰撞体，但脚底仍站在原平台顶面。
             float y = platform.y - 6.0f;
             float height = platform.height + 10.0f;
+            float scale = height / source.height;
+            float sourceCap = source.height * 0.65f;
+            float cap = sourceCap * scale;
             DrawTexturePro(terrainTexture, { source.x, source.y, sourceCap, source.height },
                 { platform.x, y, cap, height }, { 0, 0 }, 0, WHITE);
-            DrawTexturePro(terrainTexture, { source.x + sourceCap, source.y, source.width - 2 * sourceCap, source.height },
-                { platform.x + cap, y, platform.width - 2 * cap, height }, { 0, 0 }, 0, WHITE);
+            // 中间按同一比例重复铺设，末块裁切；不用横向拉伸像素石块。
+            float middleEnd = platform.x + platform.width - cap;
+            float repeatWidth = source.height * 2.0f * scale;
+            for (float x = platform.x + cap; x < middleEnd; x += repeatWidth)
+            {
+                float width = std::min(repeatWidth, middleEnd - x);
+                DrawTexturePro(terrainTexture, { source.x + sourceCap, source.y, width / scale, source.height },
+                    { x, y, width, height }, { 0, 0 }, 0, WHITE);
+            }
             DrawTexturePro(terrainTexture, { source.x + source.width - sourceCap, source.y, sourceCap, source.height },
                 { platform.x + platform.width - cap, y, cap, height }, { 0, 0 }, 0, WHITE);
         }

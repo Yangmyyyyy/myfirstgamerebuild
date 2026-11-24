@@ -16,7 +16,7 @@ struct PlayerVisualState
     float damageCooldown = 0.0f;
 };
 
-// 只管理骑士的外观。血量、输入规则、移动、碰撞和攻击仍由main.cpp处理。
+// 只管理角色外观；移动、碰撞、血量与攻击由Player和Combat处理。
 class PlayerVisual
 {
 public: // 外部使用这些函数；main不需要知道内部怎样截帧和选图
@@ -29,20 +29,17 @@ public: // 外部使用这些函数；main不需要知道内部怎样截帧和�
     void Draw(const Rectangle& player) const; // 镜头模式内绘制，只读取玩家位置
     void Unload(); // CloseWindow之前释放；清空句柄，重复调用也不会再次释放
     const char* GetMotionName() const; // F1调试文字使用
-    int GetFrame() const; // 返回0～5的当前帧编号
+    int GetFrameCount() const; // 调试界面读取当前动作的实际总帧数
+    int GetFrame() const; // 当前帧从0开始；行走/跑步12帧，其余已接入动作8帧
 
 private: // 数据归对象自己管理，类外通过函数使用它们
-    enum class Motion { Idle, Walk, Run, Dash, Rise, Fall, Dead };
-    Texture2D knightTexture = {};
-    Texture2D runTexture = {};
-    Rectangle animationFrames[4][6] = {};
-    Rectangle runFrames[6] = {};
-    float spriteScale = 1.0f;
-    float runScale = 1.0f;
-    float animationTime = 0.0f; // 原来main里的计时，现在属于这个对象
+    enum class Motion { Idle, Walk, Run, Dash, Rise, Fall, Land, Dead };
+    Texture2D heroTextures[5] = {}; // 待机、行走、跑步、跳跃、冲刺，各自一张图
+    float animationTime = 0.0f;
+    float landingTimeLeft = 0.0f; // 仅控制落地缓冲外观，不锁定玩家操作
     Motion motion = Motion::Idle;
     Motion previousAnimation = Motion::Idle;
-    int animation = 0; // 当前选择的图集行，Update写入、Draw读取
+    int animation = 0;
     int frame = 0;
     bool grounded = false;
     float lookDirection = 1.0f;

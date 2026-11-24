@@ -18,6 +18,6 @@ void DrawHud(const Player& player, const Enemy& enemy, const Combat& combat,
     if (combat.IsAttacking()) DrawText("ATTACK", 20, 132, 24, ORANGE);
     DrawText("A/D Walk | Shift Run | Space Jump | C Dash | J Attack | F1 Debug", 20, 52, 18, BLACK);
     if (showCollision)
-        DrawText(TextFormat("Motion: %s | Frame: %d / 6 | Ground: %d | FPS: %d",
-            visual.GetMotionName(), visual.GetFrame()+1, player.IsGrounded(), GetFPS()), 20, 78, 18, BLACK);
+        DrawText(TextFormat("Motion: %s | Frame: %d / %d | Ground: %d | FPS: %d",
+            visual.GetMotionName(), visual.GetFrame()+1, visual.GetFrameCount(), player.IsGrounded(), GetFPS()), 20, 78, 18, BLACK);
 }
