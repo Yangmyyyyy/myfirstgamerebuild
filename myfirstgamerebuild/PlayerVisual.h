@@ -35,6 +35,11 @@ public: // 外部使用这些函数；main不需要知道内部怎样截帧和�
 private: // 数据归对象自己管理，类外通过函数使用它们
     enum class Motion { Idle, Walk, Run, Dash, Rise, Fall, Land, Dead };
     Texture2D heroTextures[5] = {}; // 待机、行走、跑步、跳跃、冲刺，各自一张图
+    Shader paletteShader = {}; // 只负责外观颜色统一，不改原始图集
+    bool paletteReady = false;
+    int clothGainLocation = -1;
+    int leatherGainLocation = -1;
+    int skinGainLocation = -1;
     float animationTime = 0.0f;
     float landingTimeLeft = 0.0f; // 仅控制落地缓冲外观，不锁定玩家操作
     Motion motion = Motion::Idle;

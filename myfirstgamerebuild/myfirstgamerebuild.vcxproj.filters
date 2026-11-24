@@ -118,4 +118,7 @@
   <ItemGroup>
     <ClInclude Include="HeroAnimationData.h"><Filter>头文件</Filter></ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="HeroStyle.h"><Filter>头文件</Filter></ClInclude>
+  </ItemGroup>
 </Project>

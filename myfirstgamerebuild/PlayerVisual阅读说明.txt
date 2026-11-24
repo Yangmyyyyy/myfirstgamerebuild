@@ -11,3 +11,5 @@ Dash按GameConfig中的实际持续时间播放一轮，不把素材预览位移
 三个hero_combo_*攻击图、原始frames.json和HTML已保存；未加载、未改变攻击判定。
 Player、Combat、Enemy、Collision和World平台矩形未改；现有巡逻/受伤/冲刺等规则保留。
 新语法std::min/std::clamp用于限制帧号，范围for逐个清理纹理；这些代做语法仍待学习。
+
+Day09校正：HeroStyle.h保存行走基准的各动作材质调色参数，hero_palette.fs在GPU上校正衣服/皮革/皮肤；只在Draw中启用。HeroAnimationData.h的ReferenceHeight统一站立参考身高，保留弯腰收腿的自然高度变化。Shader和uniform是助手代做的新内容，尚待学习。

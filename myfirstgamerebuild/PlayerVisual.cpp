@@ -1,5 +1,6 @@
 ﻿#include "PlayerVisual.h"
 #include "HeroAnimationData.h"
+#include "HeroStyle.h"
 #include "GameConfig.h"
 #include <algorithm>
 #include <filesystem>
@@ -13,6 +14,11 @@ void PlayerVisual::Load(const char* resourceDirectory)
         heroTextures[i] = LoadTexture((folder / HeroAnimationData::Clips[i].file).string().c_str());
         if (heroTextures[i].id != 0) SetTextureFilter(heroTextures[i], TEXTURE_FILTER_POINT);
     }
+    paletteShader = LoadShader(nullptr, (folder / "hero_palette.fs").string().c_str());
+    clothGainLocation = GetShaderLocation(paletteShader, "clothGain");
+    leatherGainLocation = GetShaderLocation(paletteShader, "leatherGain");
+    skinGainLocation = GetShaderLocation(paletteShader, "skinGain");
+    paletteReady = clothGainLocation >= 0 && leatherGainLocation >= 0 && skinGainLocation >= 0;
 }
 
 void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
@@ -76,9 +82,18 @@ void PlayerVisual::Draw(const Rectangle& player) const
     // 围绕脚底锚点翻转，剑伸得更远时也不会把身体挤到碰撞框另一侧。
     float x = centerX + xFromAnchor;
     if (lookDirection < 0) { source.width = -source.width; x = centerX - xFromAnchor - width; }
+    if (paletteReady)
+    {
+        const auto& profile = HeroStyle::Profiles[animation];
+        SetShaderValue(paletteShader, clothGainLocation, profile.cloth, SHADER_UNIFORM_VEC3);
+        SetShaderValue(paletteShader, leatherGainLocation, profile.leather, SHADER_UNIFORM_VEC3);
+        SetShaderValue(paletteShader, skinGainLocation, profile.skin, SHADER_UNIFORM_VEC3);
+        BeginShaderMode(paletteShader); // 只有这一张角色贴图使用调色，平台和背景不变
+    }
     DrawTexturePro(heroTextures[animation], source,
         { x, footY + (pose.source.y - pose.anchor.y) * clip.scale, width, height },
         { 0, 0 }, 0, tint);
+    if (paletteReady) EndShaderMode();
 }
 
 void PlayerVisual::Unload()
@@ -88,6 +103,10 @@ void PlayerVisual::Unload()
         if (texture.id != 0) UnloadTexture(texture);
         texture = {};
     }
+    if (paletteShader.id != 0) UnloadShader(paletteShader);
+    paletteShader = {};
+    paletteReady = false;
+    clothGainLocation = leatherGainLocation = skinGainLocation = -1;
     animationTime = 0.0f;
     landingTimeLeft = 0.0f;
     motion = previousAnimation = Motion::Idle;
@@ -111,3 +130,6 @@ int PlayerVisual::GetFrameCount() const { return HeroAnimationData::Clips[animat
 // 死亡暂用待机首帧；预览页的offsetX/offsetY不作为游戏位移，避免跳跃冲刺叠加。
 // 昨日课堂知识：Load准备纹理，Update选帧，Draw显示，Unload释放；const引用只读原数据。
 // 三元表达式选择真假值；static_cast<int>截小数；%循环帧号或切换黄白闪烁。
+
+// Day09统一外观：HeroStyle按行走配色校准，HeroAnimationData按站姿校准整体大小。
+// 调色器只在Draw期间影响角色；所有PNG、动作帧、脚底锚点、碰撞与位移保持原样。
