@@ -9,6 +9,8 @@ namespace GameConfig
     constexpr float PlayerHeight = 40.0f;
     constexpr int PlayerMaxHealth = 100;
     constexpr int EnemyMaxHealth = 100;
+    constexpr float EnemyPatrolDuration = 2.0f;     // 每段巡逻行走2秒
+    constexpr float EnemyPatrolWaitDuration = 1.5f; // 每段行走结束后，原地等待1.5秒
     constexpr float WalkSpeed = 200.0f;
     constexpr float RunSpeed = 300.0f;
     constexpr float Gravity = 900.0f;

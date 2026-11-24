@@ -19,7 +19,6 @@ int main()
     fs::path resourceDir = "resources";
     if (!fs::exists(resourceDir / "hero" / "hero_idle_8.png"))
         resourceDir = fs::path(GetApplicationDirectory()) / "resources";
-
     World world;
     Player player;
     Enemy enemy;
@@ -35,6 +34,7 @@ int main()
         float deltaTime = GetFrameTime();
         PlayerInput input = ReadPlayerInput(); // 先读这一帧的输入
         combat.UpdateTimers(deltaTime); // 更新已有攻击倒计时，再允许启动下一次攻击
+        enemy.Update(deltaTime, world); // 把main里已经创建的world地图传进去
         player.Update(deltaTime, input, world, combat, enemy); // 输入、物理、接触伤害
         combat.ResolvePlayerAttack(player, enemy);
         // 玩家移动和状态处理完成后，再结算攻击命中
@@ -69,3 +69,8 @@ int main()
 // main里的GetVisualState提供快照，Draw(player.GetBounds())把选好的图片连接到玩家位置。
 // 明天复习：先看本文件流程，再看Combat的TryStart/Cancel/ResolvePlayerAttack，不必一次读完所有类。
 // 前摇/生效/后摇今天只介绍了概念，当前仍是0.2秒攻击；练习题未回答，不记为已掌握。
+
+// Day09日末：用户亲写敌人Update、走2秒/停1.5秒、换向和地图引用传参。
+// enemy.Update位于player.Update前，使旧接触伤害使用更新后的敌人位置。
+// 外观包、slim_v2体型修订、锚点、色板Shader由助手代做，仍需逐步学习。
+// 暂存的攻击动画尚未启用；敌人重力/碰撞/索敌/主动攻击也还没实现。
