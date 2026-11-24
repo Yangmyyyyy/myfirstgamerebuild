@@ -32,3 +32,12 @@ PlayerVisual.Load加载resources/hero/hero_palette.fs；Draw只对角色启用�
 行走的调色增益为1，保持参考动作颜色；其他已启用动作使用对应校正参数。三组归档攻击的校正参数已准备，攻击动画仍未启用。
 HeroAnimationData::ReferenceHeight取行走参考帧的80.8984像素；待机按344像素直立姿势、跳跃按369像素回站姿、冲刺按371像素收势校准整组缩放。行走、跑步比例保留。
 同一组动作使用固定比例，不逐帧强制撑满高度，避免弯腰、屈膝和腾空时被拉长。所有脚底锚点、帧数、帧时间、碰撞和移动规则不变。
+
+Day09 slim_v2体型修正（2026-11-24）：
+上一版仅通过颜色增益和整体高度缩放，未解决待机原画肩腰与四肢偏粗的问题；现以hero_walk_12.png作为唯一人物基准，用内置image_gen编辑待机、跳跃、冲刺及三组攻击原画。
+新图：hero_idle_slim_v2.png、hero_jump_slim_v2.png、hero_dash_slim_v2.png、hero_combo_slash_slim_v2.png、hero_combo_thrust_slim_v2.png、hero_combo_chop_slim_v2.png。
+修正目标为窄肩、细腰、较细的前臂/腿/靴、统一头身比与肘部袖长；行走和跑步原图保留。六组完整提示见slim-v2-prompts.txt。
+新裁剪框、脚底锚点和游戏缩放见frames_slim_v2.json；原frames.json及全部原图保留为原包存档。HeroAnimationData.h只启用五组移动动作，未启动攻击动画。
+调色器使用行走实际像素颜色生成共用材质色板；行走原色直通，其余动作按布料/皮革头发/皮肤/其他颜色匹配到同一色板，保持透明边缘与后叠加黄白闪烁。
+整组缩放按新图中站姿参考校准，同组帧不逐帧拉伸。屈膝/前倾的高度差属于姿势，碰撞框、移动、攻击与巡逻规则未变。
+动作及体型为生成素材修订，已检查游戏内对照；最终切换观感仍以用户试玩评价为准。

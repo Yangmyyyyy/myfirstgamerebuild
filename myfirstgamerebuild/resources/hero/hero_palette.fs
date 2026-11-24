@@ -6,18 +6,28 @@ uniform vec4 colDiffuse;
 uniform vec3 clothGain;
 uniform vec3 leatherGain;
 uniform vec3 skinGain;
+uniform float referenceMode;
 out vec4 finalColor;
+const vec3 palette0[16] = vec3[16](vec3(0.1490196,0.1372549,0.1568627), vec3(0.3921569,0.3960784,0.4392157), vec3(0.5176471,0.5411765,0.5686275), vec3(0.2705882,0.2745098,0.3254902), vec3(0.1921569,0.2039216,0.2627451), vec3(0.1058824,0.0941176,0.1058824), vec3(0.3019608,0.3215686,0.3803922), vec3(0.1843137,0.1725490,0.2156863), vec3(0.3372549,0.3568627,0.4117647), vec3(0.1176471,0.1019608,0.1333333), vec3(0.1529412,0.1137255,0.1411765), vec3(0.4392157,0.4588235,0.4980392), vec3(0.6392157,0.6431373,0.6549020), vec3(0.2196078,0.2313725,0.2980392), vec3(0.0274510,0.0117647,0.0156863), vec3(0.2156863,0.2000000,0.2235294));
+const vec3 palette1[16] = vec3[16](vec3(0.3725490,0.2392157,0.1960784), vec3(0.5647059,0.3843137,0.3098039), vec3(0.4588235,0.3019608,0.2470588), vec3(0.2509804,0.1568627,0.1333333), vec3(0.3058824,0.2000000,0.1686275), vec3(0.4039216,0.2705882,0.2235294), vec3(0.4980392,0.3372549,0.2745098), vec3(0.3411765,0.2274510,0.2000000), vec3(0.4117647,0.2901961,0.2392157), vec3(0.3686275,0.2627451,0.2235294), vec3(0.3098039,0.2156863,0.1882353), vec3(0.2666667,0.1725490,0.1568627), vec3(0.7333333,0.6392157,0.5529412), vec3(0.5294118,0.3607843,0.2941176), vec3(0.2156863,0.1333333,0.1176471), vec3(0.4470588,0.3568627,0.3333333));
+const vec3 palette2[16] = vec3[16](vec3(0.9019608,0.7098039,0.5607843), vec3(0.6509804,0.4274510,0.3098039), vec3(0.7921569,0.5568627,0.4039216), vec3(0.8627451,0.6352941,0.4980392), vec3(0.7372549,0.4862745,0.3411765), vec3(0.8823529,0.6823529,0.5215686), vec3(0.8431373,0.5960784,0.4470588), vec3(0.7568627,0.5137255,0.3686275), vec3(0.9294118,0.7058824,0.5372549), vec3(0.6156863,0.3803922,0.2705882), vec3(0.9490196,0.7686275,0.6117647), vec3(0.8941176,0.6588235,0.5333333), vec3(0.6666667,0.4509804,0.3411765), vec3(0.7098039,0.4627451,0.3333333), vec3(0.9254902,0.7294118,0.5725490), vec3(0.7882353,0.6117647,0.4941176));
+const vec3 palette3[16] = vec3[16](vec3(0.2117647,0.1333333,0.1254902), vec3(0.7333333,0.7215686,0.7333333), vec3(0.9764706,0.9803922,0.9882353), vec3(0.2901961,0.2000000,0.1882353), vec3(0.1529412,0.0941176,0.0941176), vec3(0.2549020,0.1647059,0.1568627), vec3(0.7921569,0.7882353,0.8039216), vec3(0.7725490,0.7607843,0.7686275), vec3(0.6588235,0.6588235,0.6823529), vec3(0.4274510,0.3960784,0.3843137), vec3(0.1843137,0.1176471,0.1137255), vec3(0.8666667,0.8588235,0.8705882), vec3(0.7019608,0.6901961,0.7176471), vec3(0.9215686,0.9215686,0.9294118), vec3(0.0313725,0.0078431,0.0117647), vec3(0.1529412,0.1019608,0.1294118));
 void main()
 {
-    vec4 texel = texture(texture0, fragTexCoord);
-    vec3 c = texel.rgb * 255.0;
-    bool skin = c.r > 155.0 && c.r-c.g > 25.0 && c.g-c.b > 12.0;
-    bool leather = c.r-c.g > 8.0 && c.g-c.b > 3.0 && c.r > c.b*1.2 && !skin;
-    bool cloth = c.b >= c.r-3.0 && c.b >= c.g-3.0 && max(c.r,max(c.g,c.b)) < 170.0 && !skin && !leather;
-    vec3 gain = vec3(1.0);
-    if (skin) gain = skinGain;
-    else if (leather) gain = leatherGain;
-    else if (cloth) gain = clothGain;
-    // Keep alpha and sword highlights; apply gameplay tint after material correction.
-    finalColor = vec4(clamp(texel.rgb*gain,0.0,1.0),texel.a) * colDiffuse * fragColor;
+    vec4 texel=texture(texture0,fragTexCoord);
+    if(referenceMode>0.5){finalColor=texel*colDiffuse*fragColor;return;}
+    vec3 c=texel.rgb*255.0;
+    bool skin=c.r>155.0 && c.r-c.g>25.0 && c.g-c.b>12.0;
+    bool leather=c.r-c.g>8.0 && c.g-c.b>3.0 && c.r>c.b*1.2 && !skin;
+    bool cloth=c.b>=c.r-3.0 && c.b>=c.g-3.0 && max(c.r,max(c.g,c.b))<170.0 && !skin && !leather;
+    vec3 gain=skin?skinGain:leather?leatherGain:cloth?clothGain:vec3(1.0);
+    vec3 corrected=clamp(texel.rgb*gain,0.0,1.0);
+    float best=100.0;vec3 color=corrected;
+    for(int i=0;i<16;i++)
+    {
+        vec3 candidate=skin?palette2[i]:leather?palette1[i]:cloth?palette0[i]:palette3[i];
+        vec3 delta=corrected-candidate;float distance=dot(delta,delta);
+        if(distance<best){best=distance;color=candidate;}
+    }
+    finalColor=vec4(color,texel.a)*colDiffuse*fragColor;
 }

@@ -13,3 +13,5 @@ Player、Combat、Enemy、Collision和World平台矩形未改；现有巡逻/受
 新语法std::min/std::clamp用于限制帧号，范围for逐个清理纹理；这些代做语法仍待学习。
 
 Day09校正：HeroStyle.h保存行走基准的各动作材质调色参数，hero_palette.fs在GPU上校正衣服/皮革/皮肤；只在Draw中启用。HeroAnimationData.h的ReferenceHeight统一站立参考身高，保留弯腰收腿的自然高度变化。Shader和uniform是助手代做的新内容，尚待学习。
+
+slim_v2修正：旧待机原画体型偏壮，单纯缩放/乘颜色无法解决。现在直接改用按行走体型重绘的待机、跳跃、冲刺图；新帧元数据见frames_slim_v2.json。共用行走色板统一色差，三组新攻击仍只归档。全部是助手代做，待逐步讲解。

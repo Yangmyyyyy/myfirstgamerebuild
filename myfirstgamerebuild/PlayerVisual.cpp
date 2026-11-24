@@ -18,7 +18,8 @@ void PlayerVisual::Load(const char* resourceDirectory)
     clothGainLocation = GetShaderLocation(paletteShader, "clothGain");
     leatherGainLocation = GetShaderLocation(paletteShader, "leatherGain");
     skinGainLocation = GetShaderLocation(paletteShader, "skinGain");
-    paletteReady = clothGainLocation >= 0 && leatherGainLocation >= 0 && skinGainLocation >= 0;
+    referenceModeLocation = GetShaderLocation(paletteShader, "referenceMode");
+    paletteReady = clothGainLocation >= 0 && leatherGainLocation >= 0 && skinGainLocation >= 0 && referenceModeLocation >= 0;
 }
 
 void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
@@ -88,6 +89,8 @@ void PlayerVisual::Draw(const Rectangle& player) const
         SetShaderValue(paletteShader, clothGainLocation, profile.cloth, SHADER_UNIFORM_VEC3);
         SetShaderValue(paletteShader, leatherGainLocation, profile.leather, SHADER_UNIFORM_VEC3);
         SetShaderValue(paletteShader, skinGainLocation, profile.skin, SHADER_UNIFORM_VEC3);
+        float referenceMode = animation == 1 ? 1.0f : 0.0f; // 行走是原色基准
+        SetShaderValue(paletteShader, referenceModeLocation, &referenceMode, SHADER_UNIFORM_FLOAT);
         BeginShaderMode(paletteShader); // 只有这一张角色贴图使用调色，平台和背景不变
     }
     DrawTexturePro(heroTextures[animation], source,
@@ -106,7 +109,7 @@ void PlayerVisual::Unload()
     if (paletteShader.id != 0) UnloadShader(paletteShader);
     paletteShader = {};
     paletteReady = false;
-    clothGainLocation = leatherGainLocation = skinGainLocation = -1;
+    clothGainLocation = leatherGainLocation = skinGainLocation = referenceModeLocation = -1;
     animationTime = 0.0f;
     landingTimeLeft = 0.0f;
     motion = previousAnimation = Motion::Idle;
@@ -133,3 +136,6 @@ int PlayerVisual::GetFrameCount() const { return HeroAnimationData::Clips[animat
 
 // Day09统一外观：HeroStyle按行走配色校准，HeroAnimationData按站姿校准整体大小。
 // 调色器只在Draw期间影响角色；所有PNG、动作帧、脚底锚点、碰撞与位移保持原样。
+
+// Day09修正：旧待机的肩腰/四肢与行走不一致，现已换成按行走体型重绘的slim_v2图。
+// 所有已启用动作共用行走色板；攻击修订稿仍仅归档，未改变战斗逻辑。
