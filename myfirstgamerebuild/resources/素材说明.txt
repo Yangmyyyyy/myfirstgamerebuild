@@ -11,3 +11,7 @@ terrain.png：依据用户提供的草地平台预览图，由图像生成工具
 2026-11-23 动画v2：新图knight_motion_v2.png，独立待机/行走/跑步/冲刺，4行6列。旧图保留。由内置图像生成工具根据旧骑士图生成，透明背景。生成提示：same knight design, exactly 6 columns x 4 rows, idle breathing with both feet planted, six sequential walk cycle frames with alternating contact/passing legs, six fast-run poses, six crouch/launch/travel/brake dash poses; consistent steel blue armor, red cape, sword/shield and body scale; all face right; no text/background/grid; same feet baseline, no cropped limbs. 精灵为生成素材，帧间细节仍需人工打磨；未宣称有专用跳跃或死亡动作。
 
 跑步v3（内置图像生成工具）：knight_run_v3.png，3列2行，只替换Run；保留旧图集中的待机/行走/冲刺。生成提示：保持原骑士钢蓝盔甲红披风剑盾，六帧向右跑步，透明背景等格；1亮近腿前伸落地、2近腿支撑、3远腿前摆、4暗远腿前伸落地且近腿后伸、5远腿支撑、6近腿前摆；近腿亮远腿暗，明确两次相反落脚，禁止六帧同一腿持续在前；无文字背景，武器四肢不裁断。每0.10秒换帧。AI动画仍需试玩打磨，不能把成功切帧等同于步态已经完美。
+
+Day09 攻击初稿knight_attack_v1.png：内置图像生成工具根据现有骑士参考制作，三列两行六帧：肩侧举剑、头顶蓄势、向前下挥、低位随挥、回收、站立。提示要求同一钢蓝骑士红披风剑盾、全身同尺度、脚底固定、向右、两抬剑/两下劈/两收招、透明背景、无文字格线、不裁武器。当前只保存供动作确认，尚未接入游戏代码；后续需检查实际连播、锚点和碰撞窗口。
+
+Day09 三连击动作第二版：三张knight_combo1/2/3_*_v2.png，分别为竖劈、横劈、突刺，各八帧。强调蓄力/重心与伸展，不通过画面冻结制造张力。全部由内置图像工具生成。预览三连击动作预览.html支持连播、单招循环、慢放、逐帧；实际源范围在combo_frames.json，完整提示在combo_v2_prompts.txt。当前仅动作设计初稿，未接入游戏，也未决定最终伤害窗口或连击输入逻辑。
