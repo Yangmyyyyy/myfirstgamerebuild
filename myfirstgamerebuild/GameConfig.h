@@ -13,6 +13,8 @@ namespace GameConfig
     constexpr float EnemyPatrolWaitDuration = 1.5f; // 每段行走结束后，原地等待1.5秒
     constexpr float WalkSpeed = 200.0f;
     constexpr float RunSpeed = 300.0f;
+    constexpr float WalkAnimationCycle = 0.72f; // 行走左右脚完成一轮的秒数，只影响外观
+    constexpr float RunAnimationCycle = 0.50f; // 跑步一轮更快，仍保留12帧
     constexpr float Gravity = 900.0f;
     constexpr float JumpSpeed = 400.0f;
     constexpr int AirJumps = 1;

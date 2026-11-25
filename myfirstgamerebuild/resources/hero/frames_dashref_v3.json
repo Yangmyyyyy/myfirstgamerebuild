@@ -82,96 +82,96 @@
         "y": 13,
         "w": 229,
         "h": 334,
-        "anchorX": 118.0,
-        "anchorY": 343
+        "anchorX": 164.0,
+        "anchorY": 348
       },
       {
         "x": 455,
         "y": 13,
         "w": 212,
         "h": 335,
-        "anchorX": 553.0,
-        "anchorY": 343
+        "anchorX": 526.0,
+        "anchorY": 348
       },
       {
         "x": 830,
         "y": 13,
         "w": 199,
         "h": 335,
-        "anchorX": 900.0,
-        "anchorY": 343
+        "anchorX": 892.0,
+        "anchorY": 348
       },
       {
         "x": 1197,
         "y": 13,
         "w": 194,
         "h": 335,
-        "anchorX": 1246.0,
-        "anchorY": 343
+        "anchorX": 1255.0,
+        "anchorY": 348
       },
       {
         "x": 79,
         "y": 375,
         "w": 226,
         "h": 333,
-        "anchorX": 115.0,
-        "anchorY": 704
+        "anchorX": 169.0,
+        "anchorY": 710
       },
       {
         "x": 440,
         "y": 375,
         "w": 227,
         "h": 333,
-        "anchorX": 580.0,
-        "anchorY": 704
+        "anchorX": 527.0,
+        "anchorY": 710
       },
       {
         "x": 795,
         "y": 375,
         "w": 234,
         "h": 333,
-        "anchorX": 841.0,
-        "anchorY": 704
+        "anchorX": 890.0,
+        "anchorY": 710
       },
       {
         "x": 1174,
         "y": 375,
         "w": 217,
         "h": 333,
-        "anchorX": 1261.0,
-        "anchorY": 704
+        "anchorX": 1254.0,
+        "anchorY": 710
       },
       {
         "x": 111,
         "y": 738,
         "w": 194,
         "h": 332,
-        "anchorX": 150.0,
-        "anchorY": 1066
+        "anchorX": 166.0,
+        "anchorY": 1072
       },
       {
         "x": 468,
         "y": 738,
         "w": 199,
         "h": 332,
-        "anchorX": 496.0,
-        "anchorY": 1066
+        "anchorX": 531.0,
+        "anchorY": 1072
       },
       {
         "x": 801,
         "y": 738,
         "w": 228,
         "h": 332,
-        "anchorX": 843.0,
-        "anchorY": 1068
+        "anchorX": 892.0,
+        "anchorY": 1072
       },
       {
         "x": 1162,
         "y": 738,
         "w": 229,
         "h": 332,
-        "anchorX": 1206.0,
-        "anchorY": 1069
+        "anchorX": 1252.0,
+        "anchorY": 1072
       }
     ],
     "gameScale": 0.229825
@@ -186,96 +186,96 @@
         "y": 40,
         "w": 240,
         "h": 307,
-        "anchorX": 219.0,
-        "anchorY": 341
+        "anchorX": 167.0,
+        "anchorY": 348
       },
       {
         "x": 423,
         "y": 51,
         "w": 229,
         "h": 296,
-        "anchorX": 529.0,
-        "anchorY": 341
+        "anchorX": 537.0,
+        "anchorY": 348
       },
       {
         "x": 791,
         "y": 51,
         "w": 222,
         "h": 296,
-        "anchorX": 816.0,
-        "anchorY": 340
+        "anchorX": 901.0,
+        "anchorY": 348
       },
       {
         "x": 1173,
         "y": 43,
         "w": 206,
         "h": 290,
-        "anchorX": 1187.0,
-        "anchorY": 328
+        "anchorX": 1278.0,
+        "anchorY": 348
       },
       {
         "x": 60,
         "y": 402,
         "w": 227,
         "h": 290,
-        "anchorX": 245.0,
-        "anchorY": 692
+        "anchorX": 180.0,
+        "anchorY": 710
       },
       {
         "x": 428,
         "y": 404,
         "w": 218,
         "h": 307,
-        "anchorX": 577.0,
-        "anchorY": 706
+        "anchorX": 544.0,
+        "anchorY": 710
       },
       {
         "x": 773,
         "y": 407,
         "w": 240,
         "h": 304,
-        "anchorX": 927.0,
-        "anchorY": 711
+        "anchorX": 906.0,
+        "anchorY": 710
       },
       {
         "x": 1187,
         "y": 414,
         "w": 191,
         "h": 297,
-        "anchorX": 1250.0,
-        "anchorY": 704
+        "anchorX": 1272.0,
+        "anchorY": 710
       },
       {
         "x": 48,
         "y": 769,
         "w": 237,
         "h": 301,
-        "anchorX": 77.0,
-        "anchorY": 1065
+        "anchorX": 174.0,
+        "anchorY": 1072
       },
       {
         "x": 419,
         "y": 765,
         "w": 231,
         "h": 305,
-        "anchorX": 435.0,
-        "anchorY": 1063
+        "anchorX": 541.0,
+        "anchorY": 1072
       },
       {
         "x": 791,
         "y": 765,
         "w": 219,
         "h": 292,
-        "anchorX": 968.0,
-        "anchorY": 1052
+        "anchorX": 909.0,
+        "anchorY": 1072
       },
       {
         "x": 1150,
         "y": 767,
         "w": 241,
         "h": 303,
-        "anchorX": 1318.0,
-        "anchorY": 1069
+        "anchorX": 1274.0,
+        "anchorY": 1072
       }
     ],
     "gameScale": 0.229825

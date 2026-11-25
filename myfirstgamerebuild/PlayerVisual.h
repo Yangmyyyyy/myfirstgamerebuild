@@ -44,6 +44,7 @@ private: // 数据归对象自己管理，类外通过函数使用它们
     int skinGainLocation = -1;
     int referenceModeLocation = -1; // 行走保留原色，其余映射到同一色板
     float animationTime = 0.0f;
+    float locomotionPhase = 0.0f; // 行走/跑步共用0到1的步态进度，切换时不重新迈第一步
     float landingTimeLeft = 0.0f; // 仅控制落地缓冲外观，不锁定玩家操作
     Motion motion = Motion::Idle;
     Motion previousAnimation = Motion::Idle;

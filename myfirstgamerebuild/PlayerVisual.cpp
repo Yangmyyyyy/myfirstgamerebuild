@@ -51,6 +51,15 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
     else if (state.moving) motion = state.running ? Motion::Run : Motion::Walk;
     else if (landingTimeLeft > 0) motion = Motion::Land;
 
+    bool locomoting = motion == Motion::Walk || motion == Motion::Run;
+    bool wasLocomoting = previousAnimation == Motion::Walk || previousAnimation == Motion::Run;
+    if (!locomoting || !wasLocomoting) locomotionPhase = 0.0f; // 停下、起跳或攻击后，下次重新迈步；走跑互切保留阶段
+    if (locomoting)
+    {
+        float cycle = motion == Motion::Run ? GameConfig::RunAnimationCycle : GameConfig::WalkAnimationCycle;
+        locomotionPhase += deltaTime / cycle; // 一轮所需时间越短，相同步长内推进越快
+        locomotionPhase -= static_cast<int>(locomotionPhase); // 去掉完整轮数，只留下当前这一轮的进度
+    }
     if (motion != previousAnimation) { animationTime = 0.0f; previousAnimation = motion; }
     animationTime += deltaTime;
     animation = 0;
@@ -65,7 +74,8 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
         : HeroAnimationData::Clips[animation]; // 其他动作使用原来的数组
     frame = static_cast<int>(animationTime / clip.seconds) % clip.count;
     // 跳跃跟随实际物理阶段，不循环整段动画，也不再叠加预览页模拟的位移。
-    if (motion == Motion::Rise) frame = std::min(3, 1 + static_cast<int>(animationTime / clip.seconds));
+    if (locomoting) frame = std::min(clip.count - 1, static_cast<int>(locomotionPhase * clip.count)); // 用共享步态进度选择走跑帧
+    else if (motion == Motion::Rise) frame = std::min(3, 1 + static_cast<int>(animationTime / clip.seconds));
     else if (motion == Motion::Fall) frame = std::min(5, 4 + static_cast<int>(animationTime / clip.seconds));
     else if (motion == Motion::Land) frame = landingTimeLeft > 0.06f ? 6 : 7;
     else if (motion == Motion::Dash)
@@ -142,6 +152,7 @@ void PlayerVisual::Unload()
     paletteReady = false;
     clothGainLocation = leatherGainLocation = skinGainLocation = referenceModeLocation = -1;
     animationTime = 0.0f;
+    locomotionPhase = 0.0f; // 释放/重新加载时也清理步态
     landingTimeLeft = 0.0f;
     motion = previousAnimation = Motion::Idle;
     animation = frame = 0;
@@ -181,3 +192,6 @@ int PlayerVisual::GetFrameCount() const
 // 刀光属于贴图外观，不会扩大攻击判定框；人物缩放与包含剑、刀光的截图总范围分开校准。
 // HeroAnimationData记录新版截图/脚底锚点/缩放；横劈与突刺仅备好数据，尚未接入三段连击。
 // referenceMode保留新版原色与浅金刀光；tint仍负责黄白受伤/无敌闪烁。
+
+// Day10 助手修正：行走/跑步锚点按躯干，不按摆动脚；跑步使用固定地面基线保留腾空起伏。
+// 走跑共用locomotionPhase，Shift切换保留左右脚阶段；速度与碰撞仍由Player处理。
