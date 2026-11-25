@@ -117,7 +117,7 @@ void PlayerVisual::Draw(const Rectangle& player) const
     float height = source.height * clip.scale;
     float xFromAnchor = (source.x - pose.anchor.x) * clip.scale;
     float centerX = player.x + player.width / 2;
-    float footY = player.y + player.height + (grounded ? 3.0f : 0.0f);
+    float footY = player.y + player.height + 3.0f; // 同一绘制基准用于地面和空中，起跳时不突然少3像素
     if (grounded)
         DrawEllipse(static_cast<int>(centerX), static_cast<int>(footY), 12, 2, Fade(BLACK, 0.16f));
     // 围绕脚底锚点翻转，剑伸得更远时也不会把身体挤到碰撞框另一侧。
@@ -195,3 +195,5 @@ int PlayerVisual::GetFrameCount() const
 
 // Day10 助手修正：行走/跑步锚点按躯干，不按摆动脚；跑步使用固定地面基线保留腾空起伏。
 // 走跑共用locomotionPhase，Shift切换保留左右脚阶段；速度与碰撞仍由Player处理。
+
+// Day10修正：待机/走跑/跳跃统一躯干横向参考；跳跃按躯干相对基准定位，不追随收起的脚。
