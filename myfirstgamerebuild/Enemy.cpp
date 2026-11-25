@@ -1,4 +1,5 @@
 ﻿#include "Enemy.h"
+#include "Collision.h" // 使用已经写好的平台碰撞功能
 #include "World.h" // 引入完整定义，为后续读取平台做准备
 
 const Rectangle& Enemy::GetBounds() const { return body; }
@@ -19,13 +20,18 @@ void Enemy::TakeDamage(int damage) // 实现敌人的受伤功能
         health = 0; // 血量最低为0，避免显示负数
     }
 }
-void Enemy::Update(float deltaTime, const World& world) // 参数与Enemy.h的声明对应
+void Enemy::Update(float deltaTime, const World& world,
+    const Rectangle& playerBounds) // 与头文件声明的参数保持一致
 {
     if (health <= 0)
     {
         return; // 敌人死亡后，结束本次更新，不再执行下面的巡逻逻辑
     }
 
+    const auto& platforms = world.GetPlatforms(); // 引用地图已有的平台数组，只读取，不复制
+    float enemyCenterX = body.x + body.width / 2.0f; // 敌人左边坐标加一半宽度，得到中心横坐标
+    float playerCenterX = playerBounds.x + playerBounds.width / 2.0f; // 玩家中心横坐标
+    float distanceX = playerCenterX - enemyCenterX; // 玩家中心减敌人中心，保留左右方向
     patrolTimeLeft -= deltaTime; // 每帧减去实际经过的时间
 
     if (patrolTimeLeft <= 0.0f)
@@ -44,10 +50,41 @@ void Enemy::Update(float deltaTime, const World& world) // 参数与Enemy.h的�
             ? GameConfig::EnemyPatrolWaitDuration // true：刚进入等待，设置1.5秒
             : GameConfig::EnemyPatrolDuration;    // false：刚恢复行走，设置2秒
     }
+    float forwardDistance = distanceX * facingDirection; // 把横向间距转换为相对朝向的间距：前方为正，后方为负
+    bool isPlayerInFront = forwardDistance > 0.0f; // 大于0得到true，表示玩家中心在敌人面前
+    const float detectionRange = 300.0f; // 索敌的水平距离，单位像素
+    bool isPlayerInRange = isPlayerInFront && forwardDistance <= detectionRange; // 玩家在前方，并且距离不超过300像素
+    float enemyCenterY = body.y + body.height / 2.0f; // 敌人中心纵坐标
+    float playerCenterY = playerBounds.y + playerBounds.height / 2.0f; // 玩家中心纵坐标
+    float distanceY = playerCenterY - enemyCenterY; // 正数表示玩家在下方，负数表示在上方
 
+    const float detectionHeight = 100.0f; // 允许玩家中心在敌人中心上下100像素以内
+    bool isPlayerNearHeight =
+        distanceY >= -detectionHeight && distanceY <= detectionHeight; // 高度差必须在-100到100之间
+
+    canSeePlayer = isPlayerInRange && isPlayerNearHeight; // 更新头文件里声明的成员变量
     if (!isPatrolWaiting)
     {
-        body.x += facingDirection * 60.0f * deltaTime; // 只有行走阶段才改变位置
+        Collision::MoveX(
+            body,                              // 要移动的敌人，函数会直接修改它的位置
+            facingDirection * 60.0f * deltaTime, // 本帧横向位移：正数向右，负数向左
+            platforms.data(),                  // 从这里读取平台数组
+            static_cast<int>(platforms.size())  // 需要检查的平台数量
+        );
+    }
+
+    velocityY += GameConfig::Gravity * deltaTime; // 重力让向下的速度逐渐增加
+
+    Collision::VerticalResult vertical = Collision::MoveY(
+        body,                              // 要移动并修正位置的敌人矩形
+        velocityY * deltaTime,             // 本帧纵向位移，单位为像素
+        platforms.data(),                  // 平台数组的首地址，供函数逐个读取
+        static_cast<int>(platforms.size())  // 平台数量，转换成函数要求的int
+    );
+
+    if (vertical.hit)
+    {
+        velocityY = 0.0f; // 碰到平台后停止纵向运动，避免速度持续累积
     }
 }
 

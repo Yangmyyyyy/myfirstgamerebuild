@@ -14,6 +14,14 @@ void PlayerVisual::Load(const char* resourceDirectory)
         heroTextures[i] = LoadTexture((folder / HeroAnimationData::Clips[i].file).string().c_str());
         if (heroTextures[i].id != 0) SetTextureFilter(heroTextures[i], TEXTURE_FILTER_POINT);
     }
+    heroTextures[5] = LoadTexture(
+        (folder / HeroAnimationData::AttackChop.file).string().c_str()
+    ); // 拼出竖劈图片的路径，加载后把纹理保存到第6项
+
+    if (heroTextures[5].id != 0)
+    {
+        SetTextureFilter(heroTextures[5], TEXTURE_FILTER_POINT); // 加载成功后使用点采样，让像素边缘保持清晰
+    }
     paletteShader = LoadShader(nullptr, (folder / "hero_palette.fs").string().c_str());
     clothGainLocation = GetShaderLocation(paletteShader, "clothGain");
     leatherGainLocation = GetShaderLocation(paletteShader, "leatherGain");
@@ -38,6 +46,7 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
     motion = Motion::Idle;
     if (state.dead) motion = Motion::Dead;
     else if (state.dashTimeLeft > 0) motion = Motion::Dash;
+    else if (state.attacking) motion = Motion::AttackChop; // 正在攻击时播放竖劈
     else if (!state.grounded) motion = state.velocityY < 0 ? Motion::Rise : Motion::Fall;
     else if (state.moving) motion = state.running ? Motion::Run : Motion::Walk;
     else if (landingTimeLeft > 0) motion = Motion::Land;
@@ -49,8 +58,11 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
     else if (motion == Motion::Run) animation = 2;
     else if (motion == Motion::Rise || motion == Motion::Fall || motion == Motion::Land) animation = 3;
     else if (motion == Motion::Dash) animation = 4;
+    else if (motion == Motion::AttackChop) animation = 5; // 第六张纹理是竖劈图片
 
-    const auto& clip = HeroAnimationData::Clips[animation];
+    const auto& clip = animation == 5
+        ? HeroAnimationData::AttackChop       // 竖劈使用单独保存的数据
+        : HeroAnimationData::Clips[animation]; // 其他动作使用原来的数组
     frame = static_cast<int>(animationTime / clip.seconds) % clip.count;
     // 跳跃跟随实际物理阶段，不循环整段动画，也不再叠加预览页模拟的位移。
     if (motion == Motion::Rise) frame = std::min(3, 1 + static_cast<int>(animationTime / clip.seconds));
@@ -61,6 +73,15 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
         float progress = (GameConfig::DashDuration - state.dashTimeLeft) / GameConfig::DashDuration;
         frame = std::clamp(static_cast<int>(progress * clip.count), 0, clip.count - 1);
     }
+    else if (motion == Motion::AttackChop)
+    {
+        float elapsed = GameConfig::AttackDuration - state.attackTimeLeft; // 总时长减剩余时间，得到已经攻击多久
+        float progress = elapsed / GameConfig::AttackDuration; // 转换为进度：0表示开始，接近1表示快结束
+        frame = std::clamp(
+            static_cast<int>(progress * clip.count), // 按进度换算帧号
+            0, clip.count - 1                       // 限制为0到7，避免超出8帧范围
+        );
+    }
     else if (motion == Motion::Dead) frame = 0; // 包内没有死亡动作，明确保留待机占位
 
     grounded = state.grounded;
@@ -70,7 +91,9 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
 void PlayerVisual::Draw(const Rectangle& player) const
 {
     if (heroTextures[animation].id == 0) { DrawRectangleRec(player, tint); return; }
-    const auto& clip = HeroAnimationData::Clips[animation];
+    const auto& clip = animation == 5
+        ? HeroAnimationData::AttackChop       // 竖劈使用单独保存的数据
+        : HeroAnimationData::Clips[animation]; // 其他动作使用原来的数组
     const auto& pose = clip.frames[frame];
     Rectangle source = pose.source;
     float width = source.width * clip.scale;
@@ -85,11 +108,12 @@ void PlayerVisual::Draw(const Rectangle& player) const
     if (lookDirection < 0) { source.width = -source.width; x = centerX - xFromAnchor - width; }
     if (paletteReady)
     {
-        const auto& profile = HeroStyle::Profiles[animation];
+        int profileIndex = animation == 5 ? 7 : animation; // 竖劈对应调色表第8项，下标7
+        const auto& profile = HeroStyle::Profiles[profileIndex]; // 读取该动作的调色配置
         SetShaderValue(paletteShader, clothGainLocation, profile.cloth, SHADER_UNIFORM_VEC3);
         SetShaderValue(paletteShader, leatherGainLocation, profile.leather, SHADER_UNIFORM_VEC3);
         SetShaderValue(paletteShader, skinGainLocation, profile.skin, SHADER_UNIFORM_VEC3);
-        float referenceMode = animation == 1 ? 1.0f : 0.0f; // 行走是原色基准
+        float referenceMode = 1.0f; // 新图已按冲刺统一配色，保留原色和刀光；tint仍负责受伤闪烁 // 行走是原色基准
         SetShaderValue(paletteShader, referenceModeLocation, &referenceMode, SHADER_UNIFORM_FLOAT);
         BeginShaderMode(paletteShader); // 只有这一张角色贴图使用调色，平台和背景不变
     }
@@ -121,12 +145,19 @@ void PlayerVisual::Unload()
 
 const char* PlayerVisual::GetMotionName() const
 {
-    const char* names[] = { "Idle", "Walk", "Run", "Dash", "Rise", "Fall", "Land", "Dead" };
+    const char* names[] = { "Idle", "Walk", "Run", "Dash", "Rise", "Fall", "Land", "Dead", "AttackChop" }; // 顺序与Motion一致
     return names[static_cast<int>(motion)];
 }
 
 int PlayerVisual::GetFrame() const { return frame; }
-int PlayerVisual::GetFrameCount() const { return HeroAnimationData::Clips[animation].count; }
+int PlayerVisual::GetFrameCount() const
+{
+    if (animation == 5)
+    {
+        return HeroAnimationData::AttackChop.count; // 竖劈的帧数
+    }
+    return HeroAnimationData::Clips[animation].count; // 原有动作的帧数
+}
 
 // Day09 助手代做/待学习：使用用户素材包接入5组外观，原frames.json与攻击图完整归档。
 // 仅换贴图及播放；Player/Combat/Enemy/Collision规则未改，攻击动画与刀光尚未接入。
@@ -139,3 +170,7 @@ int PlayerVisual::GetFrameCount() const { return HeroAnimationData::Clips[animat
 
 // Day09修正：旧待机的肩腰/四肢与行走不一致，现已换成按行走体型重绘的slim_v2图。
 // 所有已启用动作共用行走色板；攻击修订稿仍仅归档，未改变战斗逻辑。
+// Day10 助手代做：按冲刺参考重绘7组图；保留原冲刺图与所有旧版备份。
+// 刀光属于贴图外观，不会扩大攻击判定框；人物缩放与包含剑、刀光的截图总范围分开校准。
+// HeroAnimationData记录新版截图/脚底锚点/缩放；横劈与突刺仅备好数据，尚未接入三段连击。
+// referenceMode保留新版原色与浅金刀光；tint仍负责黄白受伤/无敌闪烁。

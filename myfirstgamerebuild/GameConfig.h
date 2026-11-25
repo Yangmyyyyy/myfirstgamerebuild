@@ -21,7 +21,7 @@ namespace GameConfig
     constexpr float DashDuration = 0.4f;
     constexpr float DashCooldown = 0.8f;
     constexpr float DashInvincibleTime = 0.4f;
-    constexpr float AttackDuration = 0.2f;
+    constexpr float AttackDuration = 0.64f; // 第一版竖劈总时长：8帧，每帧约0.08秒
     constexpr float AttackReach = 60.0f;
     constexpr int PlayerAttackDamage = 20; // 玩家每次普通攻击造成20点伤害
     constexpr int ContactDamage = 10;

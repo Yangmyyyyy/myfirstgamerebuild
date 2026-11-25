@@ -34,12 +34,15 @@ int main()
         float deltaTime = GetFrameTime();
         PlayerInput input = ReadPlayerInput(); // 先读这一帧的输入
         combat.UpdateTimers(deltaTime); // 更新已有攻击倒计时，再允许启动下一次攻击
-        enemy.Update(deltaTime, world); // 把main里已经创建的world地图传进去
+        enemy.Update(deltaTime, world, player.GetBounds()); // 取出玩家碰撞矩形，传给敌人
         player.Update(deltaTime, input, world, combat, enemy); // 输入、物理、接触伤害
         combat.ResolvePlayerAttack(player, enemy);
         // 玩家移动和状态处理完成后，再结算攻击命中
         camera.Update(player.GetBounds(), world.GetWidth()); // 使用玩家处理后的最新位置
-        playerVisual.Update(deltaTime, player.GetVisualState(input.running)); // 最后选择外观
+        PlayerVisualState visualState = player.GetVisualState(input.running); // 先取得移动、跳跃等已有外观信息
+        visualState.attacking = combat.IsAttacking(); // 把当前是否攻击填进外观信息
+        visualState.attackTimeLeft = combat.GetTimeLeft(); // 把攻击剩余时间也填进去
+        playerVisual.Update(deltaTime, visualState); // 将补充完整的信息交给动画模块
 
         BeginDrawing();
         ClearBackground(SKYBLUE);
