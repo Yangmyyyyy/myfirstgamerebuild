@@ -101,5 +101,12 @@ void Enemy::Update(float deltaTime, const World& world,
 // 10. #include "World.h"提供完整定义；要使用GetPlatforms等成员时需要它。
 // 11. 声明/定义/调用的参数要对应。增加World前置声明不会自动增加Update参数。
 // 12. //后直到换行都属于注释，不能把结束用的}接在注释后面。
-// 当前world参数只接入，还没读取平台；横移60像素/秒仍为临时测试值。
-// 下次：读取地图平台，复用Collision加重力和分轴碰撞，再做前向索敌与追击。
+// Day09历史记录：当时world只接入；Day10已读取平台并接入重力与碰撞。
+// 当前：平台碰撞与前向范围已写入；追击与主动攻击仍待实现。
+
+// 重做Day10复盘：用户亲写平台读取、重力、分轴碰撞和前向范围，已反馈平台碰撞正常。
+// GetBounds只是函数名；return body决定提供敌人矩形，变量body才保存数据。
+// playerBounds是Update参数的名字；main用player.GetBounds()提供玩家矩形，名字不必相同。
+// distanceX乘朝向后前方为正；前方300像素与上下100像素的条件用&&同时限制。
+// canSeePlayer放private供成员函数共享；Update赋值不能再加bool遮蔽成员。
+// 当前仅计算索敌，Draw仍蓝色；追击、墙壁遮挡、主动攻击尚未实现。

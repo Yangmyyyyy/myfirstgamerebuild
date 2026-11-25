@@ -3,7 +3,7 @@
 #include "GameConfig.h"
 class World; // 前置声明：告诉编译器，World是一个类
 
-// Day09：已有左右巡逻和原地等待；重力/平台碰撞、索敌追击及主动攻击尚未实现。
+// Day10：已有巡逻、等待、重力、平台碰撞和前向范围计算；追击与主动攻击尚未实现。
 class Enemy
 {
 public:

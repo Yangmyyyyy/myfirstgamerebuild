@@ -29,3 +29,9 @@ Collision::VerticalResult Collision::MoveY(Rectangle& body, float distance, cons
     }
     return {};
 }
+
+// 重做Day10复盘：MoveX/MoveY知道检测步骤，但平台首地址和数量必须由调用处传入。
+// 用户问landed在哪里判断：distance > 0本身就是比较表达式，正数为true，0/负数为false。
+// return {true, distance > 0}按VerticalResult中hit、landed的声明顺序提供两个值。
+// 它等价于result.hit=true; result.landed=distance>0; return result;，不是另有隐藏函数。
+// 无碰撞return {}使用成员默认值：hit=false、landed=false。
