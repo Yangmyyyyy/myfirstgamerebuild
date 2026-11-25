@@ -21,7 +21,10 @@ namespace GameConfig
     constexpr float DashDuration = 0.4f;
     constexpr float DashCooldown = 0.8f;
     constexpr float DashInvincibleTime = 0.4f;
-    constexpr float AttackDuration = 0.64f; // 第一版竖劈总时长：8帧，每帧约0.08秒
+    constexpr float AttackDuration = 0.44f; // 保留你调的总时长；8帧不再平均分配时间
+    constexpr float AttackChopFrameWeights[8] = {
+        0.22f, 0.14f, 0.07f, 0.06f, 0.06f, 0.13f, 0.14f, 0.18f
+    }; // 每帧占总时长的比例，合计1；举剑留时间，挥剑快，收招稍慢
     constexpr float AttackReach = 60.0f;
     constexpr int PlayerAttackDamage = 20; // 玩家每次普通攻击造成20点伤害
     constexpr int ContactDamage = 10;

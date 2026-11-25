@@ -75,12 +75,19 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
     }
     else if (motion == Motion::AttackChop)
     {
-        float elapsed = GameConfig::AttackDuration - state.attackTimeLeft; // 总时长减剩余时间，得到已经攻击多久
-        float progress = elapsed / GameConfig::AttackDuration; // 转换为进度：0表示开始，接近1表示快结束
-        frame = std::clamp(
-            static_cast<int>(progress * clip.count), // 按进度换算帧号
-            0, clip.count - 1                       // 限制为0到7，避免超出8帧范围
-        );
+        float elapsed = GameConfig::AttackDuration - state.attackTimeLeft; // 本次攻击已经经过的时间
+        float progress = std::clamp(elapsed / GameConfig::AttackDuration, 0.0f, 1.0f); // 总进度限制在0到1
+        float frameEnd = 0.0f; // 累加每帧比例，得到这一帧结束时的进度
+        frame = clip.count - 1; // 如果进度已到末尾，保留最后一帧，不循环回举剑
+        for (int i = 0; i < clip.count; ++i)
+        {
+            frameEnd += GameConfig::AttackChopFrameWeights[i]; // 前面帧的时长加起来，形成当前帧的结束边界
+            if (progress < frameEnd)
+            {
+                frame = i; // 进度落在这一帧的区间，选择这一帧
+                break; // 已找到本次要画的帧，不再检查后面的帧
+            }
+        }
     }
     else if (motion == Motion::Dead) frame = 0; // 包内没有死亡动作，明确保留待机占位
 
