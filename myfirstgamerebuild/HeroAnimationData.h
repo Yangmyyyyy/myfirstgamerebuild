@@ -76,14 +76,11 @@ namespace HeroAnimationData
             { { 480.0f, 0, 120, 80 }, { 535.0f, 80 } },
             { { 600.0f, 0, 120, 80 }, { 655.0f, 80 } }
         } };
-    // 助手按原骑士造型新制双手突刺：躯干锚点逐帧对齐，刀光不参与身体尺寸校准。
-    inline constexpr Clip AttackThrust = { "free_knight/_Thrust_twohand_v1.png", 6, 0.0733f, 0.60f, {
-            { { 0, 0, 362, 724 }, { 151, 481 } },
-            { { 362, 0, 362, 724 }, { 498, 481 } },
-            { { 724, 0, 362, 724 }, { 828, 481 } },
-            { { 1086, 0, 362, 724 }, { 1197, 481 } },
-            { { 1448, 0, 362, 724 }, { 1596, 481 } },
-            { { 1810, 0, 362, 724 }, { 1953, 481 } }
+    inline constexpr Clip AttackThrust = { "free_knight/_CrouchAttack.png", 4, 0.1000f, 2.0f, {
+            { { 0.0f, 0, 120, 80 }, { 55.0f, 80 } },
+            { { 120.0f, 0, 120, 80 }, { 175.0f, 80 } },
+            { { 240.0f, 0, 120, 80 }, { 295.0f, 80 } },
+            { { 360.0f, 0, 120, 80 }, { 415.0f, 80 } }
         } };
     inline constexpr Clip Fall = { "free_knight/_Fall.png", 3, 0.1000f, 2.0f, {
             { { 0.0f, 0, 120, 80 }, { 55.0f, 80 } },
@@ -102,7 +99,7 @@ namespace HeroAnimationData
             { { 960.0f, 0, 120, 80 }, { 1015.0f, 80 } },
             { { 1080.0f, 0, 120, 80 }, { 1135.0f, 80 } }
         } };
-    // 第三段接入双手突刺6帧；动作编号和三连击流程保持不变。
+    // 第三段暂用蹲姿横扫占位：素材包没有突刺动画，不改变三连击功能。
     inline const Clip& GetClip(int animation)
     {
         if (animation == 5) return AttackChop;
