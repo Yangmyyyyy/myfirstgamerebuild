@@ -29,11 +29,11 @@ namespace GameConfig
     constexpr float AttackActiveStart = AttackDuration * 0.43f; // 攻击进行到总时长的43%时，开始允许伤害
     constexpr float AttackActiveEnd = AttackDuration * 0.55f;   // 进行到55%时，结束伤害生效阶段
     constexpr float AttackSlashFrameWeights[] = { 0.24f, 0.18f, 0.18f, 0.12f, 0.12f, 0.16f }; // 新素材按真实帧数分配时间，合计1
-    constexpr float AttackThrustFrameWeights[] = { 0.28f, 0.38f, 0.17f, 0.17f }; // 新素材按真实帧数分配时间，合计1
+    constexpr float AttackThrustFrameWeights[] = { 0.16f, 0.12f, 0.18f, 0.20f, 0.17f, 0.17f }; // 新素材按真实帧数分配时间，合计1
     constexpr float AttackSlashActiveStart = AttackDuration * 0.24f; // 前两帧结束，剑开始横向挥出
     constexpr float AttackSlashActiveEnd = AttackDuration * 0.60f; // 第五张结束，横劈收招前关闭伤害
     constexpr float AttackThrustActiveStart = AttackDuration * 0.28f; // 前两帧准备结束
-    constexpr float AttackThrustActiveEnd = AttackDuration * 0.66f; // 第五张刺出结束，之后不再造成伤害
+    constexpr float AttackThrustActiveEnd = AttackDuration * 0.66f; // 第四帧刺出结束，之后进入收剑，不再造成伤害
     constexpr float AttackChopStepDistance = 12.0f; // 第一段前踏总距离，像素
     constexpr float AttackSlashStepDistance = 18.0f; // 第二段横劈向前带一步
     constexpr float AttackThrustStepDistance = 28.0f; // 第三段突刺前踏稍远
