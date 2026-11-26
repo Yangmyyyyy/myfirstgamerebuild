@@ -3,7 +3,7 @@
 class Player; // 前置声明：这里只需要知道有这个类型，避免头文件互相包含
 class Enemy;
 
-// 保存攻击计时、方向和每剑一次的命中结算；前摇/后摇与弹反尚待实现。
+// 保存三连击计时、方向、预约和每段一次命中；已有生效窗口，弹反尚未实现。
 class Combat
 {
 public:
@@ -24,6 +24,6 @@ private:
     float attackTimeLeft = 0.0f;
     float attackDirection = 1.0f;
     bool hasHitEnemy = false;
-    int comboStep = 0;        // 当前攻击段数：0表示没有连击，1竖劈、2横劈、3突刺
+    int comboStep = 0;        // 当前攻击段数：0表示没有连击，1第一刀、2横劈、3下蹲横扫
     bool attackQueued = false; // 是否已经预约下一段攻击：初始没有预约
 };

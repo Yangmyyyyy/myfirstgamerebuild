@@ -34,7 +34,7 @@ void Combat::TryStart(bool pressed, bool playerAlive, float dashTimeLeft, float 
         attackTimeLeft = GameConfig::AttackDuration;
         attackDirection = facingDirection; // 发动瞬间锁方向
         hasHitEnemy = false; // 新的一剑开始，重新允许命中一次
-        comboStep =1;         // 重置攻击段数
+        comboStep = 1;        // 发动第一段；只有Cancel才把段数清成0
         attackQueued = false; // 清除下一段攻击的预约
     }
     else if (pressed && playerAlive && dashTimeLeft <= 0 &&
@@ -154,3 +154,12 @@ void Combat::ResolvePlayerAttack(const Player& player, Enemy& enemy)
 // Cancel清攻击计时；只有成功发动Dash才调用，冷却中按C不会取消；死亡和R也显式清理。
 // 不画敌人不等于删除数据，所以接触伤害还要检查敌人HP>0；存活敌人的旧接触伤害暂时保留。
 // 待学：前摇抬剑不伤、生效窗口能伤一次、后摇收招不伤；连击/弹反/AI只是设计，尚未实现。
+
+// 重做Day11复盘（2026-11-26）：用户按提示亲写攻击生效窗口和三连击预约。
+// IsAttacking只问“攻击是否还没结束”；IsAttackActive进一步问“现在能否造成伤害”。
+// elapsed >= start会当场比较并产生bool，不是函数；&&要求开始已到且结束未到。
+// TryStart第一次按J设comboStep=1；else if处理第二次按键，避免首次同时预约。
+// UpdateTimers先减时间，段结束且有预约才+1；清预约、重开时间、重置本段命中记录。
+// Cancel清时间/段数/预约，和仅减deltaTime不同；冲刺、死亡、重开也清连击。
+// 第三段当前显示原版下蹲横扫。AttackThrust是历史名称，不能据此认定外观是突刺。
+// GetAttackMoveX由助手代写：地面前踏12/18/28像素，返回本帧增量；数学按用户意愿待学。
