@@ -3,7 +3,7 @@
 // 助手接入原始FreeKnight图片，不重绘、不拉宽；120x80固定格，脚底锚点(55,80)。
 namespace HeroAnimationData
 {
-    struct Frame { Rectangle source; Vector2 anchor; };
+    struct Frame { Rectangle source; Vector2 anchor; int textureAnimation = -1; }; // -1用当前动作纹理；其他编号读取已有原图。
     struct Clip { const char* file; int count; float seconds; float scale; Frame frames[12]; };
     inline constexpr float ReferenceHeight = 76.0f;
     // 素材没有独立Walk：Walk和Run共用跑步图，但播放周期不同。
@@ -49,12 +49,17 @@ namespace HeroAnimationData
             { { 120.0f, 0, 120, 80 }, { 175.0f, 80 } },
             { { 240.0f, 0, 120, 80 }, { 295.0f, 80 } }
         } },
-        // 助手按用户低姿态冲刺参考新绘4帧；单独缩放到原骑士体型。
-        { "free_knight/_Dash_reference_v1.png", 4, 0.1000f, 0.38f, {
-            { { 0, 0, 543, 724 }, { 277, 466 } },
-            { { 543, 0, 543, 724 }, { 820, 466 } },
-            { { 1086, 0, 543, 724 }, { 1363, 466 } },
-            { { 1629, 0, 543, 724 }, { 1906, 466 } }
+        // 不重绘、不拉伸：原跑步过渡帧与原冲刺帧组成8个播放阶段。
+        // 中段两张原冲刺交替，不能把这8阶段误认为8张新画的姿势。
+        { "free_knight/_Dash.png", 8, 0.0500f, 2.0f, {
+            { { 240, 0, 120, 80 }, { 295, 80 }, 2 },
+            { { 360, 0, 120, 80 }, { 415, 80 }, 2 },
+            { { 0, 0, 120, 80 }, { 55, 80 }, 4 },
+            { { 120, 0, 120, 80 }, { 175, 80 }, 4 },
+            { { 0, 0, 120, 80 }, { 55, 80 }, 4 },
+            { { 120, 0, 120, 80 }, { 175, 80 }, 4 },
+            { { 960, 0, 120, 80 }, { 1015, 80 }, 2 },
+            { { 1080, 0, 120, 80 }, { 1135, 80 }, 2 }
         } },
     };
     inline constexpr Clip AttackChop = { "free_knight/_AttackNoMovement.png", 4, 0.1000f, 2.0f, {
