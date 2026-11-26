@@ -87,7 +87,7 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
     else if (motion == Motion::Dash)
     {
         float progress = (GameConfig::DashDuration - state.dashTimeLeft) / GameConfig::DashDuration;
-        // 一次冲刺顺序播放完整8帧；不循环回开头，也不插入直立姿势。
+        // 一次冲刺播放8个滑铲阶段：先入铲，中段贴地滑行，最后收势。
         frame = std::clamp(static_cast<int>(progress * clip.count), 0, clip.count - 1);
     }
     else if (motion == Motion::AttackChop ||
