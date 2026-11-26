@@ -5,7 +5,25 @@
 
 void Combat::UpdateTimers(float deltaTime)
 {
-    if (attackTimeLeft > 0) attackTimeLeft -= deltaTime;
+    if (attackTimeLeft > 0)
+    {
+        attackTimeLeft -= deltaTime; // 正在攻击时，减少剩余时间
+
+        if (attackTimeLeft <= 0)
+        {
+            if (attackQueued && comboStep < 3)
+            {
+                comboStep += 1; // 当前段数加1：第一段接第二段，第二段接第三段
+                attackTimeLeft = GameConfig::AttackDuration; // 为新的一段重新设置攻击时间
+                attackQueued = false; // 这次预约已经用掉，下一次接招需要再次按J
+                hasHitEnemy = false; // 新的一段可以重新对敌人造成一次伤害
+            }
+            else
+            {
+                Cancel(); // 没有预约，或者第三段已经结束，就清理本轮连击
+            }
+        }
+    }
 }
 
 void Combat::TryStart(bool pressed, bool playerAlive, float dashTimeLeft, float facingDirection)
@@ -15,14 +33,53 @@ void Combat::TryStart(bool pressed, bool playerAlive, float dashTimeLeft, float 
         attackTimeLeft = GameConfig::AttackDuration;
         attackDirection = facingDirection; // 发动瞬间锁方向
         hasHitEnemy = false; // 新的一剑开始，重新允许命中一次
+        comboStep =1;         // 重置攻击段数
+        attackQueued = false; // 清除下一段攻击的预约
+    }
+    else if (pressed && playerAlive && dashTimeLeft <= 0 &&
+        IsAttacking() && comboStep < 3)
+    {
+        attackQueued = true; // 正在攻击时再次按J，记住要接下一段
     }
 }
-void Combat::Cancel() // 实现属于Combat类的Cancel函数
+void Combat::Cancel()
 {
-    attackTimeLeft = 0.0f; // 清零剩余时间，让攻击立即结束
+    attackTimeLeft = 0.0f; // 清除攻击剩余时间
+    comboStep = 0;         // 清除当前攻击段数
+    attackQueued = false; // 清除下一段攻击的预约
 }
 bool Combat::IsAttacking() const { return attackTimeLeft > 0; }
 float Combat::GetTimeLeft() const { return attackTimeLeft; }
+int Combat::GetComboStep() const
+{
+    return comboStep; // 返回Combat保存的当前攻击段数
+}
+bool Combat::IsAttackActive() const
+{
+    if (!IsAttacking())
+    {
+        return false; // 根本没在攻击，当然不能造成攻击伤害
+    }
+
+    float elapsed = GameConfig::AttackDuration - attackTimeLeft; // 总时长减剩余时间，得到已经攻击多久
+
+    float activeStart = GameConfig::AttackActiveStart; // 第一段仍用你已经确认的竖劈窗口
+    float activeEnd = GameConfig::AttackActiveEnd;
+    if (comboStep == 2)
+    {
+        activeStart = GameConfig::AttackSlashActiveStart; // 第二段匹配横劈出剑
+        activeEnd = GameConfig::AttackSlashActiveEnd;
+    }
+    else if (comboStep == 3)
+    {
+        activeStart = GameConfig::AttackThrustActiveStart; // 第三段匹配突刺伸剑
+        activeEnd = GameConfig::AttackThrustActiveEnd;
+    }
+    bool reachedStart = elapsed >= activeStart; // 比较产生true/false
+    bool beforeEnd = elapsed < activeEnd;
+
+    return reachedStart && beforeEnd; // 两个条件都成立，才返回true
+}
 
 Rectangle Combat::GetAttackBox(const Rectangle& player) const
 {
@@ -33,7 +90,7 @@ Rectangle Combat::GetAttackBox(const Rectangle& player) const
 
 void Combat::DrawAttackBox(const Player& player) const
 {
-    if (IsAttacking() && !player.IsDead() && player.GetDashTimeLeft() <= 0)
+    if (IsAttackActive() && !player.IsDead() && player.GetDashTimeLeft() <= 0)
     {
         Rectangle box = GetAttackBox(player.GetBounds());
         DrawRectangleRec(box, Fade(ORANGE, 0.35f));
@@ -53,7 +110,7 @@ void Combat::ResolveContactDamage(Player& player, const Enemy& enemy) const
 }
 void Combat::ResolvePlayerAttack(const Player& player, Enemy& enemy)
 {
-    if (!IsAttacking() || hasHitEnemy || player.IsDead() ||
+    if (!IsAttackActive() || hasHitEnemy || player.IsDead() ||
         player.GetDashTimeLeft() > 0 || enemy.GetHealth() <= 0)
     {
         return; // 当前不能造成伤害，直接结束本次函数调用

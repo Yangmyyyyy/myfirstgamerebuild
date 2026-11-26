@@ -27,6 +27,18 @@ namespace GameConfig
     constexpr float AttackChopFrameWeights[8] = {
         0.22f, 0.14f, 0.07f, 0.06f, 0.06f, 0.13f, 0.14f, 0.18f
     }; // 每帧占总时长的比例，合计1；举剑留时间，挥剑快，收招稍慢
+    constexpr float AttackActiveStart = AttackDuration * 0.43f; // 攻击进行到总时长的43%时，开始允许伤害
+    constexpr float AttackActiveEnd = AttackDuration * 0.55f;   // 进行到55%时，结束伤害生效阶段
+    constexpr float AttackSlashFrameWeights[8] = {
+        0.16f, 0.08f, 0.12f, 0.12f, 0.12f, 0.10f, 0.12f, 0.18f
+    }; // 横劈减少肩后准备的停留，横向挥动留出可读时间；合计1
+    constexpr float AttackThrustFrameWeights[8] = {
+        0.16f, 0.12f, 0.12f, 0.14f, 0.12f, 0.10f, 0.10f, 0.14f
+    }; // 突刺按蓄力、伸剑、回收分别分配时间；合计1
+    constexpr float AttackSlashActiveStart = AttackDuration * 0.24f; // 前两帧结束，剑开始横向挥出
+    constexpr float AttackSlashActiveEnd = AttackDuration * 0.60f; // 第五张结束，横劈收招前关闭伤害
+    constexpr float AttackThrustActiveStart = AttackDuration * 0.28f; // 前两帧准备结束
+    constexpr float AttackThrustActiveEnd = AttackDuration * 0.66f; // 第五张刺出结束，之后不再造成伤害
     constexpr float AttackReach = 60.0f;
     constexpr int PlayerAttackDamage = 20; // 玩家每次普通攻击造成20点伤害
     constexpr int ContactDamage = 10;

@@ -42,6 +42,7 @@ int main()
         PlayerVisualState visualState = player.GetVisualState(input.running); // 先取得移动、跳跃等已有外观信息
         visualState.attacking = combat.IsAttacking(); // 把当前是否攻击填进外观信息
         visualState.attackTimeLeft = combat.GetTimeLeft(); // 把攻击剩余时间也填进去
+        visualState.comboStep = combat.GetComboStep(); // 取得当前攻击段数，填入外观快照
         playerVisual.Update(deltaTime, visualState); // 将补充完整的信息交给动画模块
 
         BeginDrawing();

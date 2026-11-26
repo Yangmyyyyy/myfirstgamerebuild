@@ -16,6 +16,7 @@ struct PlayerVisualState
     float damageCooldown = 0.0f;
     bool attacking = false;     // 是否正在攻击，供动画模块选择攻击动作
     float attackTimeLeft = 0.0f; // 本次攻击剩余时间，后面用于计算播放到哪一帧
+    int comboStep = 0; // 外观快照里的攻击段数，用来选择竖劈、横劈或突刺
 };
 
 // 只管理角色外观；移动、碰撞、血量与攻击由Player和Combat处理。
@@ -35,8 +36,11 @@ public: // 外部使用这些函数；main不需要知道内部怎样截帧和�
     int GetFrame() const; // 当前帧从0开始；行走/跑步12帧，其余已接入动作8帧
 
 private: // 数据归对象自己管理，类外通过函数使用它们
-    enum class Motion { Idle, Walk, Run, Dash, Rise, Fall, Land, Dead, AttackChop }; // 末尾增加竖劈动作
-    Texture2D heroTextures[6] = {}; // 前5项保存移动图片，第6项保存第一段竖劈图片
+    enum class Motion {
+        Idle, Walk, Run, Dash, Rise, Fall, Land, Dead,
+        AttackChop, AttackSlash, AttackThrust // 竖劈、横劈、突刺
+    };
+    Texture2D heroTextures[8] = {}; // 前5项是移动图片，下标5竖劈、6横劈、7突刺
     Shader paletteShader = {}; // 只负责外观颜色统一，不改原始图集
     bool paletteReady = false;
     int clothGainLocation = -1;
