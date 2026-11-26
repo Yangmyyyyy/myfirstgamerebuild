@@ -2,6 +2,7 @@
 #include "Player.h"
 #include "Enemy.h"
 #include "GameConfig.h"
+#include <algorithm> // std::clamp限制踏步进度
 
 void Combat::UpdateTimers(float deltaTime)
 {
@@ -54,6 +55,26 @@ int Combat::GetComboStep() const
 {
     return comboStep; // 返回Combat保存的当前攻击段数
 }
+float Combat::GetAttackMoveX(float deltaTime) const
+{
+    if (!IsAttacking() || deltaTime <= 0.0f) return 0.0f; // 不攻击/没有经过时间，就没有前踏
+
+    float distance = GameConfig::AttackChopStepDistance;
+    if (comboStep == 2) distance = GameConfig::AttackSlashStepDistance;
+    else if (comboStep == 3) distance = GameConfig::AttackThrustStepDistance;
+
+    float elapsed = GameConfig::AttackDuration - attackTimeLeft; // 本段攻击已经进行多久
+    float duration = GameConfig::AttackStepEnd - GameConfig::AttackStepStart;
+    if (duration <= 0.0f) return 0.0f; // 配置区间无效时不移动，避免除以0
+
+    float current = std::clamp((elapsed - GameConfig::AttackStepStart) / duration, 0.0f, 1.0f);
+    float previous = std::clamp((elapsed - deltaTime - GameConfig::AttackStepStart) / duration, 0.0f, 1.0f);
+    // 平滑曲线：起步和停步速度接近0，中段较快，避免匀速滑着走。
+    float currentDistance = current * current * (3.0f - 2.0f * current);
+    float previousDistance = previous * previous * (3.0f - 2.0f * previous);
+    return attackDirection * distance * (currentDistance - previousDistance); // 只返回本帧增量，不重复加总距离
+}
+
 bool Combat::IsAttackActive() const
 {
     if (!IsAttacking())

@@ -13,6 +13,7 @@ public:
     bool IsAttacking() const;
     bool IsAttackActive() const; // 声明：判断攻击是否处于伤害生效阶段，返回true或false
     float GetTimeLeft() const;
+    float GetAttackMoveX(float deltaTime) const; // 查询本帧攻击前踏位移，沿发动时锁定的方向
     int GetComboStep() const; // 声明：返回当前攻击段数，查询时不修改状态
     Rectangle GetAttackBox(const Rectangle& player) const;
     void DrawAttackBox(const Player& player) const;

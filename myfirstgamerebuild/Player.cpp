@@ -85,6 +85,10 @@ void Player::Update(float deltaTime, const PlayerInput& input, const World& worl
 
     if (dashTimeLeft > 0 && playerHealth > 0)
         moveX = dashDirection * GameConfig::DashSpeed * deltaTime; // 冲刺时改用锁定方向的位移
+    else if (combat.IsAttacking() && playerHealth > 0 && isGrounded)
+    {
+        moveX = combat.GetAttackMoveX(deltaTime); // 地面攻击时自动前踏；普通方向输入仍锁定
+    }
 
     bool hitWallOnX = Collision::MoveX(player, moveX, platforms.data(), static_cast<int>(platforms.size()));
     if (hitWallOnX && moveX != 0) dashTimeLeft = 0.0f; // 碰撞工具报告结果，玩法决定停止冲刺
@@ -172,3 +176,6 @@ PlayerVisualState Player::GetVisualState(bool running) const
     state.damageCooldown = damageCooldown;
     return state; // 只给外观一份快照，它不能通过这份数据改玩家
 }
+
+// Day11 助手代做：攻击前踏是实际碰撞矩形位移，复用MoveX挡墙；冲刺取消后不会叠加前踏。
+// 空中不额外推动，重力/跳跃继续按原规则；每段结束/取消后不保留待补偿的前踏距离。

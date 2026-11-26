@@ -39,6 +39,11 @@ namespace GameConfig
     constexpr float AttackSlashActiveEnd = AttackDuration * 0.60f; // 第五张结束，横劈收招前关闭伤害
     constexpr float AttackThrustActiveStart = AttackDuration * 0.28f; // 前两帧准备结束
     constexpr float AttackThrustActiveEnd = AttackDuration * 0.66f; // 第五张刺出结束，之后不再造成伤害
+    constexpr float AttackChopStepDistance = 12.0f; // 第一段前踏总距离，像素
+    constexpr float AttackSlashStepDistance = 18.0f; // 第二段横劈向前带一步
+    constexpr float AttackThrustStepDistance = 28.0f; // 第三段突刺前踏稍远
+    constexpr float AttackStepStart = AttackDuration * 0.18f; // 准备动作后开始踏步
+    constexpr float AttackStepEnd = AttackDuration * 0.66f; // 挥动结束附近停止，不在收招时持续滑行
     constexpr float AttackReach = 60.0f;
     constexpr int PlayerAttackDamage = 20; // 玩家每次普通攻击造成20点伤害
     constexpr int ContactDamage = 10;
