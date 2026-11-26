@@ -126,7 +126,7 @@ void PlayerVisual::Draw(const Rectangle& player) const
     float height = source.height * clip.scale;
     float xFromAnchor = (source.x - pose.anchor.x) * clip.scale;
     float centerX = player.x + player.width / 2;
-    float footY = player.y + player.height + 3.0f; // 同一绘制基准用于地面和空中，起跳时不突然少3像素
+    float footY = player.y + player.height; // 外观脚底与碰撞体底部一致，空中也沿用同一基准。
     if (grounded)
         DrawEllipse(static_cast<int>(centerX), static_cast<int>(footY), 12, 2, Fade(BLACK, 0.16f));
     // 围绕脚底锚点翻转，剑伸得更远时也不会把身体挤到碰撞框另一侧。

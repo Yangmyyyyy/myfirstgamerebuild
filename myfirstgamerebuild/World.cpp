@@ -34,7 +34,7 @@ void World::DrawPlatforms() const
         if (i == 0)
         {
             // 厚地面重复铺，末块只画剩余部分，避免把岩石拉成长条。
-            float tileHeight = platform.height + 8.0f;
+            float tileHeight = platform.height; // 草地顶面直接对齐碰撞面，不再上抬8像素。
             float tileWidth = source.width / source.height * tileHeight;
             for (float x = platform.x; x < platform.x + platform.width; x += tileWidth)
             {
@@ -42,13 +42,13 @@ void World::DrawPlatforms() const
                 if (x + width > platform.x + platform.width) width = platform.x + platform.width - x;
                 Rectangle piece = source;
                 piece.width *= width / tileWidth;
-                DrawTexturePro(terrainTexture, piece, { x, platform.y - 8, width, tileHeight }, { 0, 0 }, 0, WHITE);
+                DrawTexturePro(terrainTexture, piece, { x, platform.y, width, tileHeight }, { 0, 0 }, 0, WHITE);
             }
         }
         else
         {
             // 左右端各保留一块，中间等比例重复铺设；草叶可超出碰撞体，但脚底仍站在原平台顶面。
-            float y = platform.y - 6.0f;
+            float y = platform.y; // 悬空平台也使用同一顶面，脚底不会陷入草皮。
             float height = platform.height + 10.0f;
             float scale = height / source.height;
             float sourceCap = source.height * 0.65f;
