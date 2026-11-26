@@ -40,7 +40,7 @@ private: // 数据归对象自己管理，类外通过函数使用它们
         Idle, Walk, Run, Dash, Rise, Fall, Land, Dead,
         AttackChop, AttackSlash, AttackThrust // 竖劈、横劈、突刺
     };
-    Texture2D heroTextures[8] = {}; // 前5项是移动图片，下标5竖劈、6横劈、7突刺
+    Texture2D heroTextures[10] = {}; // 前5项是移动图片，下标5竖劈、6横劈、7突刺
     Shader paletteShader = {}; // 只负责外观颜色统一，不改原始图集
     bool paletteReady = false;
     int clothGainLocation = -1;

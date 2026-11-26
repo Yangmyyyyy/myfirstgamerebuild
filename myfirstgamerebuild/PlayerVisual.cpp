@@ -9,42 +9,14 @@ void PlayerVisual::Load(const char* resourceDirectory)
 {
     Unload(); // 重新加载前先释放旧纹理；窗口必须已创建
     const std::filesystem::path folder = std::filesystem::path(resourceDirectory) / "hero";
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i < 10; ++i)
     {
-        heroTextures[i] = LoadTexture((folder / HeroAnimationData::Clips[i].file).string().c_str());
+        const auto& clip = HeroAnimationData::GetClip(i);
+        heroTextures[i] = LoadTexture((folder / clip.file).string().c_str());
         if (heroTextures[i].id != 0) SetTextureFilter(heroTextures[i], TEXTURE_FILTER_POINT);
     }
-    heroTextures[5] = LoadTexture(
-        (folder / HeroAnimationData::AttackChop.file).string().c_str()
-    ); // 拼出竖劈图片的路径，加载后把纹理保存到第6项
+    paletteReady = false; // 原作者配色直接显示，避免旧角色调色器改变盔甲颜色。
 
-    if (heroTextures[5].id != 0)
-    {
-        SetTextureFilter(heroTextures[5], TEXTURE_FILTER_POINT); // 加载成功后使用点采样，让像素边缘保持清晰
-    }
-    heroTextures[6] = LoadTexture(
-        (folder / HeroAnimationData::AttackSlash.file).string().c_str()
-    ); // 读取第二段横劈图片，保存到下标6
-
-    heroTextures[7] = LoadTexture(
-        (folder / HeroAnimationData::AttackThrust.file).string().c_str()
-    ); // 读取第三段突刺图片，保存到下标7
-
-    if (heroTextures[6].id != 0)
-    {
-        SetTextureFilter(heroTextures[6], TEXTURE_FILTER_POINT); // 横劈加载成功后，使用点采样
-    }
-
-    if (heroTextures[7].id != 0)
-    {
-        SetTextureFilter(heroTextures[7], TEXTURE_FILTER_POINT); // 突刺加载成功后，使用点采样
-    }
-    paletteShader = LoadShader(nullptr, (folder / "hero_palette.fs").string().c_str());
-    clothGainLocation = GetShaderLocation(paletteShader, "clothGain");
-    leatherGainLocation = GetShaderLocation(paletteShader, "leatherGain");
-    skinGainLocation = GetShaderLocation(paletteShader, "skinGain");
-    referenceModeLocation = GetShaderLocation(paletteShader, "referenceMode");
-    paletteReady = clothGainLocation >= 0 && leatherGainLocation >= 0 && skinGainLocation >= 0 && referenceModeLocation >= 0;
 }
 
 void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
@@ -96,7 +68,10 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
     animation = 0;
     if (motion == Motion::Walk) animation = 1;
     else if (motion == Motion::Run) animation = 2;
-    else if (motion == Motion::Rise || motion == Motion::Fall || motion == Motion::Land) animation = 3;
+    else if (motion == Motion::Rise) animation = 3;
+    else if (motion == Motion::Fall) animation = 8;
+    else if (motion == Motion::Dead) animation = 9; // 独立死亡动画，播放结束后保持倒地。
+    else if (motion == Motion::Land) animation = 0; // 包内没有落地动画，回到待机。
     else if (motion == Motion::Dash) animation = 4;
     else if (motion == Motion::AttackChop) animation = 5; // 第六张纹理是竖劈图片
     else if (motion == Motion::AttackSlash) animation = 6; // 横劈纹理与数据的编号
@@ -106,9 +81,9 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
     frame = static_cast<int>(animationTime / clip.seconds) % clip.count;
     // 跳跃跟随实际物理阶段，不循环整段动画，也不再叠加预览页模拟的位移。
     if (locomoting) frame = std::min(clip.count - 1, static_cast<int>(locomotionPhase * clip.count)); // 用共享步态进度选择走跑帧
-    else if (motion == Motion::Rise) frame = std::min(3, 1 + static_cast<int>(animationTime / clip.seconds));
-    else if (motion == Motion::Fall) frame = std::min(5, 4 + static_cast<int>(animationTime / clip.seconds));
-    else if (motion == Motion::Land) frame = landingTimeLeft > 0.06f ? 6 : 7;
+    else if (motion == Motion::Rise) frame = std::min(clip.count - 1, static_cast<int>(animationTime / clip.seconds));
+    else if (motion == Motion::Fall) frame = std::min(clip.count - 1, static_cast<int>(animationTime / clip.seconds));
+    else if (motion == Motion::Land) frame = 0;
     else if (motion == Motion::Dash)
     {
         float progress = (GameConfig::DashDuration - state.dashTimeLeft) / GameConfig::DashDuration;
@@ -135,7 +110,7 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
             }
         }
     }
-    else if (motion == Motion::Dead) frame = 0; // 包内没有死亡动作，明确保留待机占位
+    else if (motion == Motion::Dead) frame = std::min(clip.count - 1, static_cast<int>(animationTime / clip.seconds)); // 到最后一帧后保持，不循环站起
 
     grounded = state.grounded;
     lookDirection = motion == Motion::Dash ? state.dashDirection : state.facingDirection;
