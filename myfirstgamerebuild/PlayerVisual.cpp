@@ -87,13 +87,8 @@ void PlayerVisual::Update(float deltaTime, const PlayerVisualState& state)
     else if (motion == Motion::Dash)
     {
         float progress = (GameConfig::DashDuration - state.dashTimeLeft) / GameConfig::DashDuration;
-        // 进入与退出过渡短一些，中间更多时间保持原版低姿态。
-        const float ends[8] = { .06f, .14f, .32f, .50f, .68f, .86f, .94f, 1.0f };
-        frame = 7;
-        for (int i = 0; i < 8; ++i)
-        {
-            if (progress < ends[i]) { frame = i; break; }
-        }
+        // 一次冲刺顺序播放完整8帧；不循环回开头，也不插入直立姿势。
+        frame = std::clamp(static_cast<int>(progress * clip.count), 0, clip.count - 1);
     }
     else if (motion == Motion::AttackChop ||
         motion == Motion::AttackSlash ||
@@ -152,8 +147,7 @@ void PlayerVisual::Draw(const Rectangle& player) const
         SetShaderValue(paletteShader, referenceModeLocation, &referenceMode, SHADER_UNIFORM_FLOAT);
         BeginShaderMode(paletteShader); // 只有这一张角色贴图使用调色，平台和背景不变
     }
-    int textureIndex = pose.textureAnimation >= 0 ? pose.textureAnimation : animation;
-    DrawTexturePro(heroTextures[textureIndex], source,
+    DrawTexturePro(heroTextures[animation], source,
         { x, footY + (pose.source.y - pose.anchor.y) * clip.scale, width, height },
         { 0, 0 }, 0, tint);
     if (paletteReady) EndShaderMode();
