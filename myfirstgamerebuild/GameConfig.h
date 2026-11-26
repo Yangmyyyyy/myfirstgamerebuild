@@ -2,6 +2,7 @@
 // 会经常调手感的数值集中在这里。constexpr表示编译期常量，不是每帧变化的状态。
 namespace GameConfig
 {
+    constexpr float CameraZoom = 1.5f; // 镜头放大1.5倍，方便观察角色动作
     constexpr int ScreenWidth = 1000;
     constexpr int ScreenHeight = 600;
     constexpr float WorldWidth = 3000.0f;

@@ -7,22 +7,10 @@ void World::Load(const char* resourceDirectory)
     Unload();
     const std::filesystem::path resourceDir(resourceDirectory);
     forestTexture = LoadTexture((resourceDir / "forest.png").string().c_str());
-    Image terrainImage = LoadImage((resourceDir / "terrain_pixel_v1.png").string().c_str());
-    terrainTexture = terrainImage.data != nullptr ? LoadTextureFromImage(terrainImage) : Texture2D{};
-    if (terrainImage.data != nullptr)
-    {
-        int split = static_cast<int>(terrainImage.height * 0.64f); // 两条素材之间的透明间隙
-        for (int row = 0; row < 2; row++)
-        {
-            int top = row == 0 ? 0 : split;
-            int height = row == 0 ? split : terrainImage.height - split;
-            Image part = ImageFromImage(terrainImage, { 0, static_cast<float>(top), static_cast<float>(terrainImage.width), static_cast<float>(height) });
-            Rectangle bounds = GetImageAlphaBorder(part, 0.1f); // 只取草地本体，排除透明留白
-            terrainFrames[row] = { bounds.x, top + bounds.y, bounds.width, bounds.height };
-            UnloadImage(part);
-        }
-    }
-    UnloadImage(terrainImage);
+    // 只读取草地与泥土主体，不把生成图外围光晕画进场景。
+    terrainTexture = LoadTexture((resourceDir / "terrain_chunky_v1.png").string().c_str());
+    terrainFrames[0] = { 55, 272, 1425, 165 };
+    terrainFrames[1] = { 110, 714, 1315, 88 };
     if (terrainTexture.id != 0) SetTextureFilter(terrainTexture, TEXTURE_FILTER_POINT);
 }
 
